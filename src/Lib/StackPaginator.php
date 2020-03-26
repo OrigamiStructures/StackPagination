@@ -2,6 +2,7 @@
 namespace StackPagination\Lib;
 
 use Cake\Datasource\Paginator;
+use Cake\Datasource\ResultSetInterface;
 use Cake\ORM\Query;
 
 /**
@@ -31,12 +32,13 @@ class StackPaginator extends Paginator {
 	 * @todo Does this method have to do any additional work to make
 	 *		 $params and $settings work properly?
 	 *
-	 * @param Callable $findStackCallable
+	 * @param Callable $object findStackCallable
      * @param array $params Request params
      * @param array $settings The settings/configuration used for pagination.
 	 * @return Query
 	 */
-    public function paginate($findStackCallable, array $params = [], array $settings = []) {
+    public function paginate(object $object, array $params = [], array $settings = []): ResultSetInterface
+    {
 
 		$paginatorCallable = function($query) use ($params, $settings) {
 		    /*
@@ -86,7 +88,7 @@ class StackPaginator extends Paginator {
          * js page update routines to fix any pagination tool blocks so they know the
          * new query args an don't restore some old page state when used.
          */
-		$result = $findStackCallable($paginatorCallable);
+		$result = $object($paginatorCallable);
 //		$this->_pagingParams['newScope' . $entity->rootId()] = ['block' => 'of', 'paging' => 'data'];
 //		osd($this->_pagingParams, 'paging prams after callable');
 		return $result;
