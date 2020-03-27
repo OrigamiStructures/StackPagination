@@ -75,7 +75,7 @@ class SeedFilterComponent extends Component
      * @return void
      * @throws BadClassConfigurationException
      */
-    public function initialize(array $config)
+    public function initialize(array $config) : void
     {
         $this->validateConfig($config);
 
