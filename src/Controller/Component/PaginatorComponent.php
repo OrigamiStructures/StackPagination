@@ -104,13 +104,13 @@ class PaginatorComponent extends CorePaginator
      */
     public function block($seedQuery, $seedTarget, $pagingScope, $varName = 'stackSet') {
 
-        list($StackTable, $seedName) = $this->parseTarget($seedTarget);
-        $pagingParams = $this->getPagingParams($pagingScope);
-
         //sets search form vars and adds current post (if any) to query
         $this->getController()->userFilter($seedQuery);
 
         try {
+            list($StackTable, $seedName) = $this->parseTarget($seedTarget);
+            $pagingParams = $this->getPagingParams($pagingScope);
+
             $stackSet = $this->getController()->paginate(
                 $StackTable->pageFor($seedName, $seedQuery->toArray()),
                 $pagingParams

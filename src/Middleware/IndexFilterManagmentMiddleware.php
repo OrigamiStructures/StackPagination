@@ -84,11 +84,12 @@ class IndexFilterManagmentMiddleware
         $session = $request->getSession();
         $filter = $session->read('filter');
 
-        $requestPath = $request->getParam('controller') . '.' . $request->getParam('action');
-
         if (is_null($filter)) {
             return $next($request, $response);
         }
+
+        $requestPath = $request->getParam('controller') . '.' . $request->getParam('action');
+
         if (!in_array($requestPath, $this->scopes[$filter['path']])) {
             $session->delete('filter');
         }
