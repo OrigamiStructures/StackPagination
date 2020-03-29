@@ -3,6 +3,7 @@
 
 namespace StackPagination\Controller\Component;
 
+use Cake\Utility\Hash;
 use StackPagination\Exception\BadClassConfigurationException;
 use StackPagination\Interfaces\FilteringInterface;
 use Stacks\Model\Table\StacksTable;
@@ -37,7 +38,7 @@ class PaginatorComponent extends CorePaginator
     {
         parent::initialize($config);
         $interfaces = class_implements($this->getController());
-        if (!$interfaces || !in_array('App\Interfaces\FilteringInterface', $interfaces)) {
+        if (!$interfaces || !in_array('StackPagination\Interfaces\FilteringInterface', $interfaces)) {
             $message = (get_class($this->getController())) . ' must implement FilteringInterface '
             . 'to work with the Pagination component.';
             throw new BadClassConfigurationException($message);
@@ -74,7 +75,8 @@ class PaginatorComponent extends CorePaginator
      */
     private function getScopesBlock($scope)
     {
-        $blocks = collection($this->getController()->getRequest()->getParam('paging'));
+//        osd($this->getController()->getRequest()->getAttribute('paging'));
+        $blocks = collection($this->getController()->getRequest()->getAttribute('paging'));
         $block = $blocks->reduce(function ($result, $block, $key) use ($scope) {
             if ($block['scope'] == $scope) {
                 $result = $block;
@@ -109,7 +111,7 @@ class PaginatorComponent extends CorePaginator
 
         try {
             list($StackTable, $seedName) = $this->parseTarget($seedTarget);
-            $pagingParams = $this->getPagingParams($pagingScope);
+            $pagingParams = $this->addScope($pagingScope, $this->getPagingParams());
 
             $stackSet = $this->getController()->paginate(
                 $StackTable->pageFor($seedName, $seedQuery->toArray()),
@@ -165,14 +167,31 @@ class PaginatorComponent extends CorePaginator
      * @param $pagingScope string A 'pagingParams.scopeKey' to us for pagination
      * @return array
      */
-    public function getPagingParams(): array
+//    public function getPagingParams($pagingScope): array
+    public function addScope($pagingScope, $params) : array
     {
-        osd('WHERE IS PAGING SCOPE');
-//        list($pagingParams, $scopeKey) = explode('.', $pagingScope);
+        list($pagingParams, $scopeKey) = explode('.', $pagingScope);
 //        $params = $this->getController()->Prefs->getPagingAttrs($pagingParams);
-//        $params['scope'] = $scopeKey;
-//        return $params;
+        $params['scope'] = $scopeKey;
+        return $params;
     }
 
+    /**
+     * Unused. retained for reference while addScope is debugged
+     * @param $name
+     * @return array
+     */
+    public function getPagingAttrs($name)
+    {
+        $path = "paging.$name";
+
+        $attrs = Hash::insert([], "limit", $this->for("$path.limit"));
+        $attrs = Hash::insert($attrs, "order", [
+            $this->for("$path.sort") => $this->for("$path.dir")
+        ]);
+        $attrs = Hash::insert($attrs, "scope", $this->for("$path.scope"));
+
+        return $attrs;
+    }
 
 }

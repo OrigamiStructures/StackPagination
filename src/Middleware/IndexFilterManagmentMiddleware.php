@@ -12,32 +12,9 @@ class IndexFilterManagmentMiddleware
 {
 
     protected $scopes = [
-        'Cardfile.organizations' => [
-            'Cardfile.organizations',
-            'Cardfile.view',
-            'Preferences.setPrefs',
-            'Requests.view',
-            'Panels.view'],
-        'Cardfile.people' => [
-            'Cardfile.people',
-            'Cardfile.view',
-            'Preferences.setPrefs',
-            'Requests.view',
-            'Panels.view'],
-        'Cardfile.groups' => [
-            'Cardfile.groups',
-            'Cardfile.view',
-            'Preferences.setPrefs',
-            'Requests.view',
-            'Panels.view'],
-        'Cardfile.index' => [
-            'Cardfile.index',
-            'Cardfile.view',
-            'Preferences.setPrefs',
-            'Requests.view',
-            'Panels.view'],
-        'Cardfile.view' => [
-            'Cardfile.view'],
+        'AdminPanel.people' => [
+            'AdminPanel.people',
+        ],
     ];
 
     /**
@@ -82,17 +59,22 @@ class IndexFilterManagmentMiddleware
         /* @var Session $session */
 
         $session = $request->getSession();
-        $filter = $session->read('filter');
 
-        if (is_null($filter)) {
+        $filter = $session->read();
+//        osd($filter);
+//        osd($this->scopes);
+
+        if (!isset($filter['path']) && !isset($filter['Auth'])) {
             return $next($request, $response);
         }
 
         $requestPath = $request->getParam('controller') . '.' . $request->getParam('action');
 
-        if (!in_array($requestPath, $this->scopes[$filter['path']])) {
-            $session->delete('filter');
-        }
+//        osd($requestPath);
+//        osd(!in_array($requestPath, $this->scopes[$filter['path']] ));
+//        if (!in_array($requestPath, $this->scopes[$filter['path']] )) {
+//            $session->delete('filter');
+//        }
         return $next($request, $response);
     }
 }
