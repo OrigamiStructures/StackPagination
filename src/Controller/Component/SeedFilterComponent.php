@@ -79,36 +79,64 @@ class SeedFilterComponent extends Component
     {
         $this->validateConfig($config);
 
+        //expects the stackTable to be filtered
         $this->tableAlias = Hash::get($config, 'tableAlias');
+        //can take custom form class but will use one from naming conventions
         $this->formClass = Hash::get($config, 'formClass') ?? 'App\Filter\\' . $this->tableAlias . 'Filter';
+        //not sure of the role of this
         $this->useCase = Hash::get($config, 'useCase') ?? 'index';
+        //filter persistance scope, accepts custom, will default to 'here'
         $this->useCase = Hash::get($config, 'filterScope') ??
             $this->getController()->request->getParam('controller')
             . '.' . $this->getController()->request->getParam('action');
 
     }
 
-    public function addSeedFilter($query)
+    /**
+     * Add a user defined filter to the pre-distilation seed query
+     *
+     * This replaces `concreteController::userFilter
+     * @param $query
+     * @return mixed
+     */
+    public function addFilter($query)
     {
-        $request = $this->getController()->request;
+        $Request = $this->getController()->getRequest();
+        $Session = $Request->getSession();
+        $Table = $this->getTable();
+        $Filter = $this->getForm();
 
-        if ($request->is(['post', 'put'])) {
-            $whereThis = $this->getForm()->execute($request->getData());
-            // persist the filter for future and paginated viewing
-            $request->getSession()
-                ->write('filter', ['path' => $this->filterScope, 'conditions' => $whereThis]);
-        } else {
-            // respond to stored filters in cases there was no post
-            $whereThis = $request->getSession()->read("filter.conditions") ?? [];
+        /**
+         * This one value will go out to render the page
+         * It may go as is or be reassigned post data which
+         * might carry error reporting
+         */
+        $formContext = $Table->newEntity([]);
+
+        if ($Request->is(['post', 'put']) && $Filter->execute($Request->getData())) {
+            $query->where($Filter->conditions);
+            $Session->write('filter', [
+                'path' => $this->filterScope,
+                'conditions' => $Filter->conditions
+            ]);
+            $formContext = $Request->getData();
         }
-        $query->where($whereThis);
+        else {
+            //@todo resolve scoping and path storage
+            $query->where($Session->read("filter.conditions") ?? []);
+        }
+        /*
+         * This one seems ok, but it will need to be associated with a
+         * particular paging scope.
+         */
+        $this->getController()->set('filterSchema', $formContext);
 
-        // set the values needed to render a search/filter for on the index page
-        $modes = ['is', 'starts', 'ends', 'contains', 'isn\'t'];
-        $identity = $this->getTable()->newEntity([]);
-        $identity->modes = $modes;
-        $this->getController()->set('filterSchema', $identity);
         return $query;
+    }
+
+    public function exportFormContext($name)
+    {
+
     }
 
     /**
@@ -132,6 +160,7 @@ class SeedFilterComponent extends Component
     public function getForm(): bool
     {
         if ($this->form === false) {
+            /* @todo this won't find forms will it? */
             $this->form = TableRegistry::getTableLocator()->get($this->formClass);
         }
         return $this->form;
@@ -140,6 +169,12 @@ class SeedFilterComponent extends Component
     /**
      * Insure $config contains valid data types
      *
+     * [
+     *  'tableAlias' => null,
+     *  'formClass' => null,
+     *  'useCase' => null,
+     *  'filterScope' => null
+     * ]
      * @param $config
      */
     private function validateConfig($config): void
