@@ -71,8 +71,11 @@ class IndexFilterManagmentMiddleware
         $sessionData = $session->read();
         $requestPath = $request->getParam('controller') . '.' . $request->getParam('action');
 
+//        osd($request->getParam('plugin') !== 'DebugKit');
+//        osd(isset($sessionData['filter']['path']), 'filter path set for ' . $sessionData['filter']['path']);
+//        osd($this->scopes[$sessionData['filter']['path']], "matches $requestPath?");
         if (
-            !$request->getParam('plugin') === 'DebugKit'
+            $request->getParam('plugin') !== 'DebugKit'
             && isset($sessionData['filter']['path'])
             && !in_array($requestPath, $this->scopes[$sessionData['filter']['path']])
         ) {
