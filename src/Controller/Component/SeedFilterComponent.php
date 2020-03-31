@@ -121,7 +121,7 @@ class SeedFilterComponent extends Component
             $query->where($Filter->conditions);
             $filter = $Session->read('filter');
             $filter['path'] = $this->getController()->getRequest()->getParam('controller')
-                . '.' . $this->getController()->getRequest()->getParam('action');
+                . '_' . $this->getController()->getRequest()->getParam('action');
             $filter['conditions'][$scope] = $Filter->conditions;
             $Session->write('filter', $filter);
             $formContext = $Request->getData();

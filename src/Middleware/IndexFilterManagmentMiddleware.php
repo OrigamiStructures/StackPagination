@@ -14,8 +14,8 @@ class IndexFilterManagmentMiddleware
 {
 
     protected $scopes = [
-        'AdminPanel.people' => [
-            'AdminPanel.people',
+        'AdminPanel_people' => [
+            'AdminPanel_people',
         ],
     ];
 
@@ -69,7 +69,7 @@ class IndexFilterManagmentMiddleware
 
         $session = $request->getSession();
         $sessionData = $session->read();
-        $requestPath = $request->getParam('controller') . '.' . $request->getParam('action');
+        $requestPath = $request->getParam('controller') . '_' . $request->getParam('action');
 
 //        osd($request->getParam('plugin') !== 'DebugKit');
 //        osd(isset($sessionData['filter']['path']), 'filter path set for ' . $sessionData['filter']['path']);
