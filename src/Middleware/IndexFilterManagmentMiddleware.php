@@ -39,7 +39,13 @@ class IndexFilterManagmentMiddleware
      * [
      *   'filter' => [
      *     'path' => 'Cardfile.people',
-     *     'conditions' => [
+     *     'scope1' => [
+     *       'OR' => [
+     *         'first_name' => 'Don',
+     *         'last_name' => 'Drake'
+     *       ]
+     *     ]
+     *     'scope2' => [
      *       'OR' => [
      *         'first_name' => 'Don',
      *         'last_name' => 'Drake'

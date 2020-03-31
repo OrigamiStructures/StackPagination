@@ -97,9 +97,10 @@ class SeedFilterComponent extends Component
      *
      * This replaces `concreteController::userFilter
      * @param $query
+     * @param $scope string the model/scope name from the pagination block for this query
      * @return mixed
      */
-    public function addFilter($query)
+    public function addFilter($query, $scope)
     {
         $Request = $this->getController()->getRequest();
         $Session = $Request->getSession();
@@ -117,7 +118,7 @@ class SeedFilterComponent extends Component
             $query->where($Filter->conditions);
             $Session->write('filter', [
                 'path' => $this->filterScope,
-                'conditions' => $Filter->conditions
+                $scope => $Filter->conditions
             ]);
             $formContext = $Request->getData();
         }
