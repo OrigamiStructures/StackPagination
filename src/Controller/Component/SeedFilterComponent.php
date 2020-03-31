@@ -125,10 +125,11 @@ class SeedFilterComponent extends Component
             $filter['conditions'][$scope] = $Filter->conditions;
             $Session->write('filter', $filter);
             $formContext = $Request->getData();
+//            osd($Filter->conditions, 'doing new post data for ' . $scope);
         }
         else {
-            //@todo resolve scoping and path storage
             $query->where($Session->read("filter.conditions.$scope") ?? []);
+//            osd($Session->read("filter.conditions.$scope") ?? [], 'doing cached filter for ' . $scope);
         }
         /*
          * This one seems ok, but it will need to be associated with a

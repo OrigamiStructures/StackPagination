@@ -3,8 +3,10 @@
 
 namespace StackPagination\Middleware;
 
+use Cake\Core\Configure;
 use Cake\Http\ServerRequest;
 use Cake\Http\Session;
+use Cake\Utility\Hash;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -63,24 +65,22 @@ class IndexFilterManagmentMiddleware
     {
         /* @var ServerRequest $request */
         /* @var Session $session */
+        /* @var string $requestPath */
 
         $session = $request->getSession();
-
         $sessionData = $session->read();
-//        osd($sessionData['filter']);
-//        osd($this->scopes);
-
-        if (!isset($sessionData['filter']['path']) && !isset($sessionData['Auth'])) {
-            return $next($request, $response);
-        }
-
         $requestPath = $request->getParam('controller') . '.' . $request->getParam('action');
 
-//        osd($requestPath);
-//        osd(!in_array($requestPath, $this->scopes[$filter['path']] ));
-        if (isset($sessionData['filter']) && !in_array($requestPath, $this->scopes[$sessionData['filter']['path']] )) {
-//            $session->delete('filter');
+        if (
+            !$request->getParam('plugin') === 'DebugKit'
+            && isset($sessionData['filter']['path'])
+            && !in_array($requestPath, $this->scopes[$sessionData['filter']['path']])
+        ) {
+            $session->delete('filter');
         }
+
+        unset($session, $sessionData, $requestPath);
+
         return $next($request, $response);
     }
 }
