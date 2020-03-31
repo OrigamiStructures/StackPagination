@@ -15,43 +15,49 @@ class IndexFilterManagmentMiddleware
 
     protected $scopes = [
         'AdminPanel_people' => [
-            'AdminPanel_people',
+            'AdminPanel_admin-panel',
         ],
     ];
 
     /**
      * Maintain content filters within sensible page scope
      *
-     * On index pages, users can search to filter the content.
+     * On many pages, users can search to filter the content.
      *
      * There will be some set of related pages where the filter should continue
-     * to exist (eg. index -> view/x -> index or index?page=2 -> index?page=3).
+     * to exist (eg. index --> view/x --> index OR index?page=2 --> index?page=3).
      *
      * This middleware looks for a saved filter and base on the current request
-     * decides whether to keep or delete it.
+     * path and decides whether to keep or delete it.
      *
-     * Filters are saved on the session on the 'filter' key.
+     * Filters are saved in the session on the 'filter' key.
      *   There are two keys in the next level.
-     * 'path' names the controller/action where the filter was created. This
-     *   string will be a key that gets the list of other controller/actions
-     *   that are in-scope for keeping the filter.
-     * 'conditions' holds the array that can be given to the query->where()
+     * 'path' names the controller_action where the filter was created. This
+     *   string will be a key that gets the list of other controller_actions
+     *   that are in-scope for the filter.
+     * 'conditions' has keys that name what paging block the filters belong to
+     *   (the key is the model/scope name from the pagination data blocks)
+     *   and each key has an array that can be given to the query->where()
      *   method.
+     *
+     * The entire filter lives or dies together.
+     *
+     * Only one filter can exist at a time, but the filter can manage multiple
+     * filtered stacks within it's page scope.
      *
      * [
      *   'filter' => [
-     *     'path' => 'Cardfile.people',
-     *     'scope1' => [
-     *       'OR' => [
-     *         'first_name' => 'Don',
-     *         'last_name' => 'Drake'
-     *       ]
-     *     ]
-     *     'scope2' => [
-     *       'OR' => [
-     *         'first_name' => 'Don',
-     *         'last_name' => 'Drake'
-     *       ]
+     *     'path' => 'Cardfile_people',
+     *     'conditions' => [
+     *        'paging_scope1' => [
+     *          'OR' => [
+     *            'first_name' => 'Don',
+     *            'last_name' => 'Drake'
+     *          ]
+     *        ],
+     *        'paging_scope2' => [
+     *          'first_name' => 'Jason',
+     *        ]
      *     ]
      *   ]
      * ]
@@ -65,24 +71,23 @@ class IndexFilterManagmentMiddleware
     {
         /* @var ServerRequest $request */
         /* @var Session $session */
-        /* @var string $requestPath */
 
         $session = $request->getSession();
         $sessionData = $session->read();
         $requestPath = $request->getParam('controller') . '_' . $request->getParam('action');
+        $filterPath = Hash::get($sessionData, 'filter.path' ) ?? 'empty';
+        $allowedPaths = Configure::read('filter_scopes.' . $filterPath);
 
-//        osd($request->getParam('plugin') !== 'DebugKit');
-//        osd(isset($sessionData['filter']['path']), 'filter path set for ' . $sessionData['filter']['path']);
-//        osd($this->scopes[$sessionData['filter']['path']], "matches $requestPath?");
         if (
-            $request->getParam('plugin') !== 'DebugKit'
-            && isset($sessionData['filter']['path'])
-            && !in_array($requestPath, $this->scopes[$sessionData['filter']['path']])
+            $request->getParam('plugin') !== 'DebugKit' //ignore all DebugKit requests
+            && isset($sessionData['filter']['path'])          //ignore if there is no filter stored
+            && $filterPath !== $requestPath                   //ignore if we're actually on the original page
+            && !in_array($requestPath, $allowedPaths)         //ignore if this path is an approved path
         ) {
-            $session->delete('filter');
+                $session->delete('filter');            //well then, delete the filter
         }
 
-        unset($session, $sessionData, $requestPath);
+        unset($session, $sessionData, $requestPath, $allowedPaths); //be a good middleware citizen
 
         return $next($request, $response);
     }
