@@ -66,11 +66,11 @@ class IndexFilterManagmentMiddleware
 
         $session = $request->getSession();
 
-        $filter = $session->read();
-//        osd($filter);
+        $sessionData = $session->read();
+//        osd($sessionData['filter']);
 //        osd($this->scopes);
 
-        if (!isset($filter['path']) && !isset($filter['Auth'])) {
+        if (!isset($sessionData['filter']['path']) && !isset($sessionData['Auth'])) {
             return $next($request, $response);
         }
 
@@ -78,9 +78,9 @@ class IndexFilterManagmentMiddleware
 
 //        osd($requestPath);
 //        osd(!in_array($requestPath, $this->scopes[$filter['path']] ));
-//        if (!in_array($requestPath, $this->scopes[$filter['path']] )) {
+        if (isset($sessionData['filter']) && !in_array($requestPath, $this->scopes[$sessionData['filter']['path']] )) {
 //            $session->delete('filter');
-//        }
+        }
         return $next($request, $response);
     }
 }

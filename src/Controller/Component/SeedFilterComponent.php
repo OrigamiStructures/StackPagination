@@ -114,17 +114,21 @@ class SeedFilterComponent extends Component
          */
         $formContext = $Table->newEntity([]);
 
-        if ($Request->is(['post', 'put']) && $Filter->execute($Request->getData())) {
+        if ($Request->is(['post', 'put'])
+            && $Request->getData('pagingScope') == $scope
+            && $Filter->execute($Request->getData())
+        ) {
             $query->where($Filter->conditions);
-            $Session->write('filter', [
-                'path' => $this->filterScope,
-                $scope => $Filter->conditions
-            ]);
+            $filter = $Session->read('filter');
+            $filter['path'] = $this->getController()->getRequest()->getParam('controller')
+                . '.' . $this->getController()->getRequest()->getParam('action');
+            $filter['conditions'][$scope] = $Filter->conditions;
+            $Session->write('filter', $filter);
             $formContext = $Request->getData();
         }
         else {
             //@todo resolve scoping and path storage
-            $query->where($Session->read("filter.conditions") ?? []);
+            $query->where($Session->read("filter.conditions.$scope") ?? []);
         }
         /*
          * This one seems ok, but it will need to be associated with a
