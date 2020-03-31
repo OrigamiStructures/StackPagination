@@ -14,9 +14,14 @@ use Cake\ORM\Query;
 use Cake\ORM\TableRegistry;
 
 
+/**
+ * Class PaginatorComponent
+ * @package StackPagination\Controller\Component
+ * @property SeedFilterComponent $SeedFilter
+ */
 class PaginatorComponent extends CorePaginator
 {
-    public $components = ['Flash'];
+    public $components = ['Flash', 'StackPagination.SeedFilter'];
 
     public function __construct(ComponentRegistry $registry, array $config = [])
     {
@@ -37,12 +42,13 @@ class PaginatorComponent extends CorePaginator
     public function initialize(array $config): void
     {
         parent::initialize($config);
-        $interfaces = class_implements($this->getController());
-        if (!$interfaces || !in_array('StackPagination\Interfaces\FilteringInterface', $interfaces)) {
-            $message = (get_class($this->getController())) . ' must implement FilteringInterface '
-            . 'to work with the Pagination component.';
-            throw new BadClassConfigurationException($message);
-        }
+//        $interfaces = class_implements($this->getController());
+//        if (!$interfaces || !in_array('StackPagination\Interfaces\FilteringInterface', $interfaces)) {
+//            $message = (get_class($this->getController())) . ' must implement FilteringInterface '
+//            . 'to work with the Pagination component.';
+//            throw new BadClassConfigurationException($message);
+//        }
+
     }
 
     /**
@@ -100,21 +106,41 @@ class PaginatorComponent extends CorePaginator
     /**
      * Filter and Paginate a stackSet, create View variables for rendering
      *
+     * $options =
+     * [
+     *      tableName => the stackTable class to use
+     *      seedName => the distiller to use
+     *      varName => 'stackSet' or supply an override variable name
+     *      paging => array of pagination settings including 'scope'
+     * ]
+     *
      * @param $seedQuery Query The query that will produce the seed ids
-     * @param $seedTarget string The 'TableAlias.seedName' for the stack query
+     * @param $options array
      * @param $pagingScope string The 'pagingParams.scopeKey' to us for pagination
+     * @return Query
      */
-    public function block($seedQuery, $seedTarget, $pagingScope, $varName = 'stackSet') {
+    public function block($seedQuery, $options) {
+        $StackTable = Hash::get($options, 'tableName');
+        $Table = TableRegistry::getTableLocator()->get($StackTable);
+        $seedName = Hash::get($options, 'seedName');
+        $pagingParams = Hash::get($options, 'paging');
+//        $varName = Hash::get($options, 'varName');
+        $scope = Hash::get($options, 'paging.scope');
+        $formClass = Hash::get($options, 'formClass');
+
+        //expects the stackTable to be filtered
+        $this->SeedFilter->setConfig( 'tableAlias', $StackTable);
+        //can take custom form class but will use one from naming conventions
+        $this->SeedFilter->setConfig('formClass', $formClass ?? 'App\Filter\\' . $StackTable . 'Filter');
 
         //sets search form vars and adds current post (if any) to query
-        $this->getController()->userFilter($seedQuery);
+        $this->SeedFilter->addFilter($seedQuery, $scope);
 
         try {
-            list($StackTable, $seedName) = $this->parseTarget($seedTarget);
-            $pagingParams = $this->addScope($pagingScope, $this->getPagingParams());
+            /* @var StacksTable $Table */
 
             $stackSet = $this->getController()->paginate(
-                $StackTable->pageFor($seedName, $seedQuery->toArray()),
+                $Table->pageFor($seedName, $seedQuery->toArray()),
                 $pagingParams
             );
         } catch (NotFoundException $e) {
@@ -123,10 +149,10 @@ class PaginatorComponent extends CorePaginator
             /*)*/;
         }
 
-        $this->getController()->set($varName, $stackSet);
-        $this->getController()->set('pagingScope', $pagingParams['scope']);
+//        $this->getController()->set($varName, $stackSet);
+//        $this->getController()->set('pagingScope', $scope);
 
-        return true;
+        return $stackSet;
     }
 
     /**
@@ -143,15 +169,15 @@ class PaginatorComponent extends CorePaginator
      * @param $seedTarget string A 'TableAlias.seedName'
      * @return array [StackTableInstance, 'seedName']
      */
-    private function parseTarget($seedTarget)
-    {
-        list($tableAlias, $seedName) = explode('.', $seedTarget);
-        $table = TableRegistry::getTableLocator()->get($tableAlias);
-        /* @var StacksTable $table */
-
-        return [$table, $seedName];
-
-    }
+//    private function parseTarget($seedTarget)
+//    {
+//        list($tableAlias, $seedName) = explode('.', $seedTarget);
+//        $table = TableRegistry::getTableLocator()->get($tableAlias);
+//        /* @var StacksTable $table */
+//
+//        return [$table, $seedName];
+//
+//    }
 
     /**
      * Get current prefs-settings for 'paging' and add a scope key to it

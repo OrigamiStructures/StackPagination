@@ -60,10 +60,10 @@ class SeedFilterComponent extends Component
      * @param ComponentRegistry $registry
      * @param array $config
      */
-    public function __construct(ComponentRegistry $registry, array $config = [])
-    {
-        parent::__construct($registry, $config);
-    }
+//    public function __construct(ComponentRegistry $registry, array $config = [])
+//    {
+//        parent::__construct($registry, $config);
+//    }
 
     /**
      * Constructor hook method.
@@ -75,22 +75,22 @@ class SeedFilterComponent extends Component
      * @return void
      * @throws BadClassConfigurationException
      */
-    public function initialize(array $config) : void
-    {
-        $this->validateConfig($config);
-
-        //expects the stackTable to be filtered
-        $this->tableAlias = Hash::get($config, 'tableAlias');
-        //can take custom form class but will use one from naming conventions
-        $this->formClass = Hash::get($config, 'formClass') ?? 'App\Filter\\' . $this->tableAlias . 'Filter';
-        //not sure of the role of this
-        $this->useCase = Hash::get($config, 'useCase') ?? 'index';
-        //filter persistance scope, accepts custom, will default to 'here'
-        $this->useCase = Hash::get($config, 'filterScope') ??
-            $this->getController()->request->getParam('controller')
-            . '.' . $this->getController()->request->getParam('action');
-
-    }
+//    public function initialize(array $config) : void
+//    {
+//        $this->validateConfig($config);
+//
+//        //expects the stackTable to be filtered
+//        $this->tableAlias = Hash::get($config, 'tableAlias');
+//        //can take custom form class but will use one from naming conventions
+//        $this->formClass = Hash::get($config, 'formClass') ?? 'App\Filter\\' . $this->tableAlias . 'Filter';
+//        //not sure of the role of this
+//        $this->useCase = Hash::get($config, 'useCase') ?? 'index';
+//        //filter persistance scope, accepts custom, will default to 'here'
+//        $this->useCase = Hash::get($config, 'filterScope') ??
+//            $this->getController()->request->getParam('controller')
+//            . '.' . $this->getController()->request->getParam('action');
+//
+//    }
 
     /**
      * Add a user defined filter to the pre-distilation seed query
@@ -146,23 +146,24 @@ class SeedFilterComponent extends Component
      */
     protected function getTable()
     {
-        if ($this->table === false) {
-            $this->table = TableRegistry::getTableLocator()->get($this->tableAlias);
-        }
+//        if ($this->table === false) {
+            $this->table = TableRegistry::getTableLocator()->get($this->getConfig('tableAlias'));
+//        }
         return $this->table;
     }
 
     /**
      * Get the form instance
      *
-     * @return bool|\Cake\Form\Form
+     * @return Cake\Form\Form
      */
-    public function getForm(): bool
+    public function getForm()
     {
-        if ($this->form === false) {
+//        if ($this->form === false) {
             /* @todo this won't find forms will it? */
-            $this->form = TableRegistry::getTableLocator()->get($this->formClass);
-        }
+        $class = $this->getConfig('formClass');
+            $this->form = new $class();
+//        }
         return $this->form;
     }
 
