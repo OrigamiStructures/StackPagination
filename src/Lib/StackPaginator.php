@@ -18,28 +18,44 @@ class StackPaginator extends Paginator {
 	/**
 	 * Implement pagination on a stack table query
 	 *
-	 * The stack query is packaged in a callable. Then the pagination is
-	 * also packaged in a callable and passed to the stack process.
-	 * The reason: pagination must happen happen to a query that is
-	 * created part way through stack assembly. Sending the pagination
-	 * processes in as a callable allows it to be on the scene for this
-	 * mid-stream use.
+	 * The stack query is packaged in a callable ($object). Then the
+	 * pagination call is packaged ($paginatorCallable) and passed to the
+	 * stack process. The reason: pagination must happen happen to a
+	 * query that is created part way through stack assembly. Sending
+	 * the pagination processes in as a callable allows it to be on the
+	 * scene for this mid-stream use.
      *
-     * Adjustments are made to the pagingParams.
+     * Adjustments are made to the pagingParams:
      * Repository-keyed sets are converted to scope-keyed sets so that
-     * multiple independent sets from a single Table are possible.
+     * multiple independent sets from a single Table are possible. These
+     * scope keys also match keyed run-time filters from the user.
+     * (see SeedFilterComponent and IndexFilterManagementMiddleware)
+     * This integration allows pagination of filtered sets.
+     *
+     * Normal pagingParams:
+     * ['TableName' => [
+     *   //paging keys and values
+     *   'scopeName' => 'thisScope',
+     *   ]
+     * ]
+     *
+     * Adjusted pagingParams:
+     * ['thisScope' => [
+     *   //paging keys and values
+     *   'scopeName' => 'thisScope',
+     *   ]
+     * ]
 	 *
 	 * @todo Does this method have to do any additional work to make
 	 *		 $params and $settings work properly?
 	 *
 	 * @param Callable $object findStackCallable
-     * @param array $params Request params
+     * @param array $params Request query params
      * @param array $settings The settings/configuration used for pagination.
 	 * @return Query
 	 */
     public function paginate(object $object, array $params = [], array $settings = []): ResultSetInterface
     {
-
 		$paginatorCallable = function($query) use ($params, $settings) {
 		    /*
 		     * $query is lost by paginate() so we need to read repository
@@ -88,10 +104,7 @@ class StackPaginator extends Paginator {
          * js page update routines to fix any pagination tool blocks so they know the
          * new query args an don't restore some old page state when used.
          */
-		$result = $object($paginatorCallable);
-//		$this->_pagingParams['newScope' . $entity->rootId()] = ['block' => 'of', 'paging' => 'data'];
-//		osd($this->_pagingParams, 'paging prams after callable');
-		return $result;
+		return $object($paginatorCallable);
     }
 
 }

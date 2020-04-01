@@ -145,14 +145,10 @@ class PaginatorComponent extends CorePaginator
                 $pagingParams
             );
         } catch (NotFoundException $e) {
-            return /*$this->getController()->redirect(*/
+            return $this->getController()->redirect(
                 $this->showLastPage($pagingParams['scope'])
-            /*)*/;
+            );
         }
-
-//        $this->getController()->set($varName, $stackSet);
-//        $this->getController()->set('pagingScope', $scope);
-
         return $stackSet;
     }
 
