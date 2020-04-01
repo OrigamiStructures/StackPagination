@@ -83,46 +83,6 @@ class PaginatorComponent extends CorePaginator
         }
         return $stackSet;
     }
-
-    /**
-     * Get current prefs-settings for 'paging' and add a scope key to it
-     *
-     * The `pagingParms` key must name one of the Preferences schema json
-     * blocks that define a user customizable paging config block.
-     *
-     * The `scopeKey` can be any string you want to identify the role of
-     * the paginated records. It will show up in the query params of the url.
-     * If you set it to 'member_candidate' your urls would like like this:
-     * `clearstudio.com/cardfile/view/19?member_candidate[page]=4`
-     *
-     * @param $pagingScope string A 'pagingParams.scopeKey' to us for pagination
-     * @return array
-     */
-//    public function getPagingParams($pagingScope): array
-    public function addScope($pagingScope, $params) : array
-    {
-        list($pagingParams, $scopeKey) = explode('.', $pagingScope);
-        $params['scope'] = $scopeKey;
-        return $params;
-    }
-
-    /**
-     * Unused. retained for reference while addScope is debugged
-     * @param $name
-     * @return array
-     */
-    public function getPagingAttrs($name)
-    {
-        $path = "paging.$name";
-
-        $attrs = Hash::insert([], "limit", $this->for("$path.limit"));
-        $attrs = Hash::insert($attrs, "order", [
-            $this->for("$path.sort") => $this->for("$path.dir")
-        ]);
-        $attrs = Hash::insert($attrs, "scope", $this->for("$path.scope"));
-
-        return $attrs;
-    }
     /**
      * Redirect to last page when request exceeds page limit
      *
