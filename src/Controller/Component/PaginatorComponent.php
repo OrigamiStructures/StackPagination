@@ -6,6 +6,7 @@ namespace StackPagination\Controller\Component;
 use Cake\Utility\Hash;
 use StackPagination\Exception\BadClassConfigurationException;
 use StackPagination\Interfaces\FilteringInterface;
+use Stacks\Model\Lib\StackSet;
 use Stacks\Model\Table\StacksTable;
 use Cake\Controller\Component\PaginatorComponent as CorePaginator;
 use Cake\Controller\ComponentRegistry;
@@ -117,7 +118,7 @@ class PaginatorComponent extends CorePaginator
      * @param $seedQuery Query The query that will produce the seed ids
      * @param $options array
      * @param $pagingScope string The 'pagingParams.scopeKey' to us for pagination
-     * @return Query
+     * @return StackSet|array StackSet is the result, array means 'redirect here' because of out of range page req
      */
     public function block($seedQuery, $options) {
         $StackTable = Hash::get($options, 'tableName');
