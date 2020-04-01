@@ -24,84 +24,17 @@ class PaginatorComponent extends CorePaginator
 {
     public $components = ['Flash', 'StackPagination.SeedFilter'];
 
-    public function __construct(ComponentRegistry $registry, array $config = [])
-    {
-        parent::__construct($registry, $config);
-    }
-
-    /**
-     * Configure this PaginatorComponent extension
-     *
-     * Requires the controller to implement FilteringInterface
-     * This will handle user search filters that persist over some
-     * scope of pages and which cooperate with pagination
-     *
-     * Requires PreferencesComponent (might be installed in AppController?)
-     *
-     * @param array $config
-     */
-    public function initialize(array $config): void
-    {
-        parent::initialize($config);
-//        $interfaces = class_implements($this->getController());
-//        if (!$interfaces || !in_array('StackPagination\Interfaces\FilteringInterface', $interfaces)) {
-//            $message = (get_class($this->getController())) . ' must implement FilteringInterface '
-//            . 'to work with the Pagination component.';
-//            throw new BadClassConfigurationException($message);
-//        }
-
-    }
-
-    /**
-     * Redirect to last page when request exceeds page limit
-     *
-     * @return array $url the url params-array for redirect()
-     */
-    public function showLastPage($scope)
-    {
-        $qParams = $this->getController()->getRequest()->getQueryParams();
-        $reqPage = $qParams[$scope]['page'];
-        $lastPage = $this->getScopesBlock($scope)['pageCount'];
-        if ($lastPage > 1) {
-            $qParams[$scope]['page'] = $lastPage;
-        } else {
-            unset($qParams[$scope]['page']);
-        }
-
-        $this->Flash->error("Redirected to page $lastPage. Page $reqPage did not exist.");
-        return [
-            'controller' => $this->getController()->getRequest()->getParam('controller'),
-            'action' => $this->getController()->getRequest()->getParam('action'),
-            '?' => $qParams
-        ];
-    }
-
-    /**
-     * @param $scope
-     * @return array
-     */
-    private function getScopesBlock($scope)
-    {
-//        osd($this->getController()->getRequest()->getAttribute('paging'));
-        $blocks = collection($this->getController()->getRequest()->getAttribute('paging'));
-        $block = $blocks->reduce(function ($result, $block, $key) use ($scope) {
-            if ($block['scope'] == $scope) {
-                $result = $block;
-            }
-            return $result;
-        }, []);
-
-        return $block;
-    }
 
     /**
      *
-     * @return \Cake\Http\Response|null
+     * @param $seedQuery Query The query that will produce the seed ids
+     * @param $options array
+     * @return StackSet
      */
-    public function index($seedQuery, $seedTarget, $pagingScope, $varName = 'stackSet')
+    public function index($seedQuery, $seedTarget, $options)
     {
         $this->getController()->viewBuilder()->setLayout('index');
-        return $this->block($seedQuery, $seedTarget, $pagingScope);
+        return $this->block($seedQuery, $options);
     }
 
     /**
@@ -117,7 +50,6 @@ class PaginatorComponent extends CorePaginator
      *
      * @param $seedQuery Query The query that will produce the seed ids
      * @param $options array
-     * @param $pagingScope string The 'pagingParams.scopeKey' to us for pagination
      * @return StackSet|array StackSet is the result, array means 'redirect here' because of out of range page req
      */
     public function block($seedQuery, $options) {
@@ -153,30 +85,6 @@ class PaginatorComponent extends CorePaginator
     }
 
     /**
-     * Produce the StackTable instance and seed name for a filtered, paginated stack query
-     *
-     * Filtered, paginated queries are similiar, but act different stacks
-     * and the seeds for the query may be on any of the seed types supported
-     * by the stack. So the call is made with a param that names both the
-     * StackTable and seed. These values are sent as a `dot` delimited string.
-     *
-     * This method validates the values and returns an array containing
-     * the table instance and the seed name string.
-     *
-     * @param $seedTarget string A 'TableAlias.seedName'
-     * @return array [StackTableInstance, 'seedName']
-     */
-//    private function parseTarget($seedTarget)
-//    {
-//        list($tableAlias, $seedName) = explode('.', $seedTarget);
-//        $table = TableRegistry::getTableLocator()->get($tableAlias);
-//        /* @var StacksTable $table */
-//
-//        return [$table, $seedName];
-//
-//    }
-
-    /**
      * Get current prefs-settings for 'paging' and add a scope key to it
      *
      * The `pagingParms` key must name one of the Preferences schema json
@@ -194,7 +102,6 @@ class PaginatorComponent extends CorePaginator
     public function addScope($pagingScope, $params) : array
     {
         list($pagingParams, $scopeKey) = explode('.', $pagingScope);
-//        $params = $this->getController()->Prefs->getPagingAttrs($pagingParams);
         $params['scope'] = $scopeKey;
         return $params;
     }
@@ -216,5 +123,43 @@ class PaginatorComponent extends CorePaginator
 
         return $attrs;
     }
+    /**
+     * Redirect to last page when request exceeds page limit
+     *
+     * @return array $url the url params-array for redirect()
+     */
+    private function showLastPage($scope)
+    {
+        $qParams = $this->getController()->getRequest()->getQueryParams();
+        $reqPage = $qParams[$scope]['page'];
+        $lastPage = $this->getScopesBlock($scope)['pageCount'];
+        if ($lastPage > 1) {
+            $qParams[$scope]['page'] = $lastPage;
+        } else {
+            unset($qParams[$scope]['page']);
+        }
 
+        $this->Flash->error("Redirected to page $lastPage. Page $reqPage did not exist.");
+        return [
+            'controller' => $this->getController()->getRequest()->getParam('controller'),
+            'action' => $this->getController()->getRequest()->getParam('action'),
+            '?' => $qParams
+        ];
+    }
+
+    /**
+     * @param $scope
+     * @return array
+     */
+    private function getScopesBlock($scope)
+    {
+        $blocks = collection($this->getController()->getRequest()->getAttribute('paging'));
+        /* This drops a top-level key and can't be a filter */
+        return $blocks->reduce(function ($result, $block, $key) use ($scope) {
+            if ($block['scope'] == $scope) {
+                $result = $block;
+            }
+            return $result;
+        }, []);
+    }
 }
