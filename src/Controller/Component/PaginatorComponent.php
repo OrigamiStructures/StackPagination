@@ -56,7 +56,6 @@ class PaginatorComponent extends CorePaginator
         $StackTable = Hash::get($options, 'tableName');
         $Table = TableRegistry::getTableLocator()->get($StackTable);
         $Table->Identity = $this->getController()->getRequest()->getAttribute('identity');
-        osd($Table->Identity);die;
         $seedName = Hash::get($options, 'seedName');
         $pagingParams = Hash::get($options, 'paging');
 //        $varName = Hash::get($options, 'varName');
