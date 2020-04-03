@@ -3,7 +3,10 @@
 
 namespace StackPagination\Controller\Component;
 
+use Cake\Datasource\ResultSetInterface;
+use Cake\Http\Response;
 use Cake\Utility\Hash;
+use http\Exception\BadMethodCallException;
 use StackPagination\Exception\BadClassConfigurationException;
 use StackPagination\Interfaces\FilteringInterface;
 use Stacks\Model\Lib\StackSet;
@@ -31,7 +34,7 @@ class PaginatorComponent extends CorePaginator
      * @param $options array
      * @return StackSet
      */
-    public function index($seedQuery, $seedTarget, $options)
+    public function index($seedQuery, $options)
     {
         $this->getController()->viewBuilder()->setLayout('index');
         return $this->block($seedQuery, $options);
@@ -42,44 +45,44 @@ class PaginatorComponent extends CorePaginator
      *
      * $options =
      * [
-     *      tableName => the stackTable class to use
+     *      tableName => string stackTableName, [name=>[config], or StackTable {obj}
      *      seedName => the distiller to use
-     *      varName => 'stackSet' or supply an override variable name
+     *      formClass => name of the class or null to use naming conventions
      *      paging => array of pagination settings including 'scope'
      * ]
+     * $seedQuery is a query that is matched to and can be modified by the formClass'
+     *      post data and the conditions that result from it
+     * $options[paging] will must have a 'scope' key on it that matches query params
+     *      to their appropriate query. There is no actual identifier on the query,
+     *      your code simple must coordinate these two elements.
+     *      - Additionally, the scope key is included in Filter forms on the page as
+     *      a hidden 'pagingScope' filed. This matches filters to paginated blocks.
      *
      * @param $seedQuery Query The query that will produce the seed ids
      * @param $options array
-     * @return StackSet|array StackSet is the result, array means 'redirect here' because of out of range page req
+     * @return ResultSetInterface|Response StackSet is the result, array means 'redirect here' because of out of range page req
      */
     public function block($seedQuery, $options) {
-        $StackTable = Hash::get($options, 'tableName');
-        $Table = TableRegistry::getTableLocator()->get($StackTable);
-        $Table->Identity = $this->getController()->getRequest()->getAttribute('identity');
-        $seedName = Hash::get($options, 'seedName');
-        $pagingParams = Hash::get($options, 'paging');
-//        $varName = Hash::get($options, 'varName');
+        /* @var StacksTable $Table */
+        list($tableName, $Table) = $this->initStackTable($options);
         $scope = Hash::get($options, 'paging.scope');
-        $formClass = Hash::get($options, 'formClass');
 
-        //expects the stackTable to be filtered
-        $this->SeedFilter->setConfig( 'tableAlias', $StackTable);
-        //can take custom form class but will use one from naming conventions
-        $this->SeedFilter->setConfig('formClass', $formClass ?? 'App\Filter\\' . $StackTable . 'Filter');
-
-        //sets search form vars and adds current post (if any) to query
-        $this->SeedFilter->addFilter($seedQuery, $scope);
+        $this->SeedFilter->setConfig( [
+            'tableAlias' => $tableName,
+            'formClass' => Hash::get($options, 'formClass')
+        ])
+            ->applyFilter($seedQuery, $scope);
 
         try {
-            /* @var StacksTable $Table */
-
             $stackSet = $this->getController()->paginate(
-                $Table->pageFor($seedName, $seedQuery->toArray()),
-                $pagingParams
+                $Table->pageFor(
+                    Hash::get($options, 'seedName'),
+                    $seedQuery->toArray()),
+                Hash::get($options, 'paging')
             );
         } catch (NotFoundException $e) {
             return $this->getController()->redirect(
-                $this->showLastPage($pagingParams['scope'])
+                $this->showLastPage($scope)
             );
         }
         return $stackSet;
@@ -122,5 +125,47 @@ class PaginatorComponent extends CorePaginator
             }
             return $result;
         }, []);
+    }
+
+    /**
+     * Setup the Table and table environmental values for this block() call
+     *
+     * $option['tableName'] may be:
+     *  [name => [config-vals]]
+     *  'name'
+     *  TabelObject {}
+     *
+     * @param $options
+     * @return array
+     */
+    protected function initStackTable($options): array
+    {
+        try {
+            $tableOption = Hash::get($options, 'tableName');
+
+            if (is_string($tableOption)) {
+                $StackTable = $tableOption;
+                $Table = TableRegistry::getTableLocator()->get($StackTable, []);
+            }
+            elseif (is_array($tableOption)) {
+                $name = array_shift(array_keys($tableOption));
+                $StackTable = $name;
+                $Table = TableRegistry::getTableLocator()->get($StackTable, $tableOption[$name]);
+            }
+            elseif ($tableOption instanceof StacksTable) {
+                $StackTable = namespaceSplit(get_class($tableOption));
+                $Table = $tableOption;
+            }
+            else {
+                throw new \Exception();
+            }
+
+            return array($StackTable, $Table);
+
+        } catch (\Exception $e) {
+            $msg = 'The "tableName" key was not set or incorrect. It is required and must
+            be a string (stackTable name), array (["stackTableName" => [config]], or StackTable {object}.';
+            throw new \BadMethodCallException($msg);
+        }
     }
 }
