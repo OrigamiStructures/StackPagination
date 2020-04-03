@@ -77,6 +77,8 @@ class SeedFilterComponent extends Component
      */
 //    public function initialize(array $config) : void
 //    {
+//        parent::initialize($config);
+//        osd($this->getConfig());
 //        $this->validateConfig($config);
 //
 //        //expects the stackTable to be filtered
@@ -100,7 +102,7 @@ class SeedFilterComponent extends Component
      * @param $scope string the model/scope name from the pagination block for this query
      * @return mixed
      */
-    public function addFilter($query, $scope)
+    public function applyFilter($query, $scope)
     {
         $Request = $this->getController()->getRequest();
         $Session = $Request->getSession();
@@ -165,11 +167,9 @@ class SeedFilterComponent extends Component
      */
     public function getForm()
     {
-//        if ($this->form === false) {
-            /* @todo this won't find forms will it? */
-        $class = $this->getConfig('formClass');
-            $this->form = new $class();
-//        }
+        $class = $this->getConfig('formClass')
+            ?? 'App\Filter\\' . $this->getConfig('tableAlias') . 'Filter';
+        $this->form = new $class();
         return $this->form;
     }
 
