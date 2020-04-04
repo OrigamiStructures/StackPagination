@@ -6,13 +6,8 @@ namespace StackPagination\Controller\Component;
 use Cake\Datasource\ResultSetInterface;
 use Cake\Http\Response;
 use Cake\Utility\Hash;
-use http\Exception\BadMethodCallException;
-use StackPagination\Exception\BadClassConfigurationException;
-use StackPagination\Interfaces\FilteringInterface;
-use Stacks\Model\Lib\StackSet;
 use Stacks\Model\Table\StacksTable;
 use Cake\Controller\Component\PaginatorComponent as CorePaginator;
-use Cake\Controller\ComponentRegistry;
 use Cake\Http\Exception\NotFoundException;
 use Cake\ORM\Query;
 use Cake\ORM\TableRegistry;
@@ -32,7 +27,7 @@ class PaginatorComponent extends CorePaginator
      *
      * @param $seedQuery Query The query that will produce the seed ids
      * @param $options array
-     * @return StackSet
+     * @return ResultSetInterface|Response StackSet is the result, array means 'redirect here' because of out of range page req
      */
     public function index($seedQuery, $options)
     {
