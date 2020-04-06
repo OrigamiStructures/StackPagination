@@ -3,9 +3,11 @@
 
 namespace StackPagination\Controller\Component;
 
+use Cake\Datasource\Exception\PageOutOfBoundsException;
 use Cake\Datasource\ResultSetInterface;
 use Cake\Http\Response;
 use Cake\Utility\Hash;
+use StackPagination\DataSource\LayerPaginator;
 use Stacks\Model\Table\StacksTable;
 use Cake\Controller\Component\PaginatorComponent as CorePaginator;
 use Cake\Http\Exception\NotFoundException;
@@ -82,6 +84,28 @@ class PaginatorComponent extends CorePaginator
         }
         return $stackSet;
     }
+
+    public function layerPaginate(object $object, array $settings = []): ResultSetInterface
+    {
+        $request = $this->_registry->getController()->getRequest();
+
+        try {
+            $results = (new LayerPaginator())->paginate(
+                $object,
+                $request->getQueryParams(),
+                $settings
+            );
+
+            $this->_setPagingParams();
+        } catch (PageOutOfBoundsException $e) {
+            $this->_setPagingParams();
+
+            throw new NotFoundException(null, null, $e);
+        }
+
+        return $results;
+    }
+
     /**
      * Redirect to last page when request exceeds page limit
      *
@@ -162,5 +186,21 @@ class PaginatorComponent extends CorePaginator
             be a string (stackTable name), array (["stackTableName" => [config]], or StackTable {object}.';
             throw new \BadMethodCallException($msg);
         }
+    }
+
+    public function l_extractData($object, array $params, array $settings)
+    {
+        $alias = 'default';
+        $defaults = $this->getDefaults($alias, $settings);
+        $options = $this->mergeOptions($params, $defaults);
+        $options = $this->validateSort($object, $options);
+        $options = $this->checkLimit($options);
+
+        $options += ['page' => 1, 'scope' => null];
+        $options['page'] = (int)$options['page'] < 1 ? 1 : (int)$options['page'];
+        [$finder, $options] = $this->_extractFinder($options);
+
+        return compact('defaults', 'options', 'finder');
+
     }
 }
