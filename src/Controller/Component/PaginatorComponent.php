@@ -44,7 +44,7 @@ class PaginatorComponent extends CorePaginator
      * [
      *      tableName => string stackTableName, [name=>[config], or StackTable {obj}
      *      seedName => the distiller to use
-     *      formClass => name of the class or null to use naming conventions
+     *      formClass => name of the class or null to use naming conventions (table-alias + Filter)
      *      paging => array of pagination settings including 'scope'
      * ]
      * $seedQuery is a query that is matched to and can be modified by the formClass'
