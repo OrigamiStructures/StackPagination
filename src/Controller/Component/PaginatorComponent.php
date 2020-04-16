@@ -122,12 +122,19 @@ class PaginatorComponent extends CorePaginator
             unset($qParams[$scope]['page']);
         }
 
+        /* @todo what other values should go into the array for complete support? */
+
+        $url = array_merge(
+            [
+                'controller' => $this->getController()->getRequest()->getParam('controller'),
+                'action' => $this->getController()->getRequest()->getParam('action'),
+            ],
+            $this->getController()->getRequest()->getParam('pass'),
+            $qParams
+            );
+
         $this->Flash->error("Redirected to page $lastPage. Page $reqPage did not exist.");
-        return [
-            'controller' => $this->getController()->getRequest()->getParam('controller'),
-            'action' => $this->getController()->getRequest()->getParam('action'),
-            '?' => $qParams
-        ];
+        return $url;
     }
 
     /**
