@@ -3,6 +3,7 @@
 
 namespace StackPagination\Controller\Component;
 
+use Cake\Datasource\QueryInterface;
 use Cake\Datasource\ResultSetInterface;
 use Cake\Http\Response;
 use Cake\Utility\Hash;
@@ -53,7 +54,7 @@ class PaginatorComponent extends CorePaginator
      *      - Additionally, the scope key is included in Filter forms on the page as
      *      a hidden 'pagingScope' filed. This matches filters to paginated blocks.
      *
-     * @param $seedQuery Query The query that will produce the seed ids
+     * @param $seedQuery Query|QueryInterface The query that will produce the seed ids
      * @param $options array
      * @return ResultSetInterface|Response StackSet is the result, array means 'redirect here' because of out of range page req
      */
