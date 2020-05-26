@@ -9,8 +9,11 @@ use Cake\Http\Session;
 use Cake\Utility\Hash;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
-class IndexFilterManagmentMiddleware
+class IndexFilterManagmentMiddleware implements MiddlewareInterface
+//class IndexFilterManagmentMiddleware
 {
 
     protected $scopes = [
@@ -20,7 +23,7 @@ class IndexFilterManagmentMiddleware
     ];
 
     /**
-     * Maintain content filters within sensible page scope
+     * Process an incoming server request.
      *
      * On many pages, users can search to filter the content.
      *
@@ -30,6 +33,7 @@ class IndexFilterManagmentMiddleware
      * This middleware looks for a saved filter and base on the current request
      * path and decides whether to keep or delete it.
      *
+     * @todo THIS HAD BEEN DELETED. IS IT NO LONGER VALID? ============
      * Filters are saved in the session on the 'filter' key.
      *   There are two keys in the next level.
      * 'path' names the controller_action where the filter was created. This
@@ -60,14 +64,13 @@ class IndexFilterManagmentMiddleware
      *        ]
      *     ]
      *   ]
-     * ]
-     *
-     * @param \Psr\Http\Message\ServerRequestInterface $request The request.
-     * @param \Psr\Http\Message\ResponseInterface $response The response.
-     * @param callable $next The next middleware to call.
-     * @return \Psr\Http\Message\ResponseInterface A response.
+     * ] END====================
+
+     * Processes an incoming server request in order to produce a response.
+     * If unable to produce the response itself, it may delegate to the provided
+     * request handler to do so.
      */
-    public function __invoke(ServerRequestInterface $request, ResponseInterface $response, $next)
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         /* @var ServerRequest $request */
         /* @var Session $session */
@@ -84,11 +87,11 @@ class IndexFilterManagmentMiddleware
             && $filterPath !== $requestPath                   //ignore if we're actually on the original page
             && !in_array($requestPath, $allowedPaths)         //ignore if this path is an approved path
         ) {
-                $session->delete('filter');            //well then, delete the filter
+            $session->delete('filter');            //well then, delete the filter
         }
 
         unset($session, $sessionData, $requestPath, $allowedPaths); //be a good middleware citizen
 
-        return $next($request, $response);
+        return $handler->handle($request, $handler);
     }
 }
