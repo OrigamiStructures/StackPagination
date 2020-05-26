@@ -8,6 +8,7 @@ use StackPagination\Exception\BadClassConfigurationException;
 use Cake\Controller\Component;
 use Cake\ORM\TableRegistry;
 use Cake\Utility\Hash;
+use Cake\Form\Form;
 
 class SeedFilterComponent extends Component
 {
@@ -163,7 +164,7 @@ class SeedFilterComponent extends Component
     /**
      * Get the form instance
      *
-     * @return Cake\Form\Form
+     * @return Form
      */
     public function getForm()
     {
