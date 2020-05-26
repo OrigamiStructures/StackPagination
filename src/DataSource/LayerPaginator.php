@@ -25,6 +25,7 @@ use Cake\Datasource\QueryInterface;
 use Cake\Datasource\RepositoryInterface;
 use Cake\Datasource\ResultSetInterface;
 use Cake\ORM\Query;
+use Cake\Routing\Router;
 use Cake\Utility\Hash;
 use Stacks\Model\Entity\StackEntity;
 use Stacks\Model\Lib\LayerAccessProcessor;
@@ -67,6 +68,25 @@ class LayerPaginator
      * @var array
      */
     protected $_pagingParams = [];
+
+    /**
+     * Perform Layer filtering, sorting, and pagination
+     *
+     * @param $stackSet StackSet
+     * @param $options array
+     * @return mixed
+     */
+    public function __invoke($stackSet, $options)
+    {
+        $request = Router::getRequest();
+
+        osd(get_class($stackSet));
+        osd($options);
+        osd($request->getQueryParams());
+        osd($stackSet->getLayerList());
+        osd($request->getSession()->read("filter.conditions") ?? []);
+    }
+
 
     /**
      * Handles automatic pagination of model records.
@@ -176,6 +196,8 @@ class LayerPaginator
      */
     public function paginate(object $object, array $params = [], array $settings = []): ResultSetInterface
     {
+
+        osd('in');
 
         $data = $this->extractData($object, $params, $settings);
         $query = $this->getQuery($object, $query, $data);
