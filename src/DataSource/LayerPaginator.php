@@ -85,6 +85,7 @@ class LayerPaginator
         osd($request->getQueryParams());
         osd($stackSet->getLayerList());
         osd($request->getSession()->read("filter.conditions") ?? []);
+        return $stackSet;
     }
 
 
