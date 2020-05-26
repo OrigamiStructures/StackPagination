@@ -78,12 +78,23 @@ class PaginatorComponent extends CorePaginator
                     $seedQuery->toArray()),
                 Hash::get($options, 'paging')
             );
+
+            $this->pagingateLayers($stackSet, $options);
+
         } catch (NotFoundException $e) {
             return $this->getController()->redirect(
                 $this->showLastPage($scope)
             );
         }
         return $stackSet;
+    }
+
+    public function pagingateLayers($stackSet, $options)
+    {
+        if (isset($options['paging']['layers'])) {
+            (new LayerPaginator())($stackSet, $options['paging']['layers']);
+            osd($options['paging']['layers']);
+        }
     }
 
     public function layerPaginate(object $object, array $settings = []): ResultSetInterface
