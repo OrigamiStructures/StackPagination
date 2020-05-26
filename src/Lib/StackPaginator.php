@@ -4,6 +4,7 @@ namespace StackPagination\Lib;
 use Cake\Datasource\Paginator;
 use Cake\Datasource\ResultSetInterface;
 use Cake\ORM\Query;
+use StackPagination\DataSource\LayerPaginator;
 
 /**
  * StackPaginator
@@ -107,4 +108,8 @@ class StackPaginator extends Paginator {
 		return $object($paginatorCallable);
     }
 
+    public function paginateLayers($stackSet, $settings)
+    {
+        return (new LayerPaginator())($stackSet, $settings);
+    }
 }
