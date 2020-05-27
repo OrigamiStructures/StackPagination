@@ -140,7 +140,7 @@ class LayerPaginator
 
     public function spawnOptionSets($stack, $options, $defaults)
     {
-        $params = Router::getRequest()->getQueryParams();
+        $request = Router::getRequest();
         $rootName = $stack->getRootLayerName();
         $layersToPaginate = array_intersect(array_keys($options), $stack->getLayerList());
         $packets = [];
@@ -148,7 +148,7 @@ class LayerPaginator
         foreach ($layersToPaginate as $layer) {
             $scope = "{$rootName}__{$layer}";
             $key = "{$rootName}_{$stack->rootId()}_{$layer}";
-            $packets[$key] = $this->mergeOptions($params, $defaults[$scope]);
+            $packets[$key] = $this->mergeOptions($request->getQuery($key) ?? [], $defaults[$scope]);
         }
         return $packets;
     }
@@ -329,7 +329,7 @@ class LayerPaginator
     protected function extractData( $alias, array $params, array $settings): array
     {
         $defaults = $this->getDefaults($alias, $settings);// MOVED TO AN EARLY REDUCE/LOOP
-        $options = $this->mergeOptions($params, $defaults);
+        $options = $this->mergeOptions($params, $defaults);//MOVED TO AN EARLY LOOP
         $options = $this->validateSort(/*$object, */$options);
         $options = $this->checkLimit($options);
 
@@ -528,10 +528,6 @@ class LayerPaginator
      */
     public function mergeOptions(array $params, array $settings): array
     {
-        if (!empty($settings['scope'])) {
-            $scope = $settings['scope'];
-            $params = !empty($params[$scope]) ? (array)$params[$scope] : [];
-        }
         $params = array_intersect_key($params, array_flip($this->getConfig('whitelist')));
 
         return array_merge($settings, $params);
@@ -591,7 +587,7 @@ class LayerPaginator
      * @return array An array of options with sort + direction removed and
      *   replaced with order if possible.
      */
-    public function validateSort(/*$object, */array $options): array
+    public function validateSort($object, array $options): array
     {
         return [];
         if (isset($options['sort'])) {
