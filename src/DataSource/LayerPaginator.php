@@ -72,20 +72,58 @@ class LayerPaginator
     /**
      * Perform Layer filtering, sorting, and pagination
      *
-     * @param $stackSet StackSet
+     * @param $stack StackSet|StackEntity
      * @param $options array
      * @return mixed
      */
-    public function __invoke($stackSet, $options)
+    public function __invoke($stack, $options)
     {
         $request = Router::getRequest();
 
-        osd(get_class($stackSet));
-        osd($options);
-        osd($request->getQueryParams());
-        osd($stackSet->getLayerList());
-        osd($request->getSession()->read("filter.conditions") ?? []);
-        return $stackSet;
+        $layersToPaginate = array_intersect(array_keys($options), $stack->getLayerList());
+        $rootName = $stack->getRootLayerName();
+        $layerSettings = collection($layersToPaginate)
+            ->reduce(function($accum, $layer) use ($options, $rootName) {
+                $accum["{$rootName}__{$layer}"] = $options[$layer];
+                $accum["{$rootName}__{$layer}"]['scope'] = $layer;
+                return $accum;
+            }, []);
+        osd($layerSettings);
+        $data = [];
+        foreach ($layerSettings as $setting) {
+            $data[] = $this->extractData($setting['scope'], $request->getQueryParams(), $setting);
+        }
+        osd($data);
+        die;
+
+
+        //get list of configured layers
+        //validate the layers
+        //make the defaults for each layer
+
+        //do the work on each stack
+        //building the paging block on the detail scope name
+
+//        if ($stack instanceof StackSet) {
+//            osd('set');
+//            foreach ($stack->getData() as $stackEntity) {
+//                $this->paginate($stackEntity, $request->getQueryParams());
+//            }
+//        }
+//        else {
+//            osd('single');
+//            $this->paginate($stack, $request->getQueryParams());
+//        }
+
+        die;
+
+//        osd(get_class($stack));
+//        osd($options);
+//        osd($request->getQueryParams());
+//        osd($stack->getLayerList());
+//        osd($request->getSession()->read("filter.conditions") ?? []);
+//        $this->extractData($stackSet,$request->getQueryParams(), $options);
+//        return $stackSet;
     }
 
 
@@ -188,20 +226,21 @@ class LayerPaginator
      * /dashboard?articles[page]=1&tags[page]=2
      * ```
      *
-     * @param \Cake\Datasource\RepositoryInterface|\Cake\Datasource\QueryInterface $object The repository or query
+     * @param StackEntity $object The repository or query
      *   to paginate.
      * @param array $params Request params
      * @param array $settings The settings/configuration used for pagination.
      * @return \Cake\Datasource\ResultSetInterface Query results
      * @throws \Cake\Datasource\Exception\PageOutOfBoundsException
      */
-    public function paginate(object $object, array $params = [], array $settings = []): ResultSetInterface
+    public function paginate($object, array $params = [], array $settings = []): ResultSetInterface
     {
 
         osd('in');
 
         $data = $this->extractData($object, $params, $settings);
-        $query = $this->getQuery($object, $query, $data);
+        osd($data);die;
+//        $query = $this->getQuery($object, $query, $data);
 
         /* @var Query $query */
 
@@ -261,14 +300,11 @@ class LayerPaginator
      * @param array $settings The settings/configuration used for pagination.
      * @return array Array with keys 'defaults', 'options' and 'finder'
      */
-    protected function extractData( $object, array $params, array $settings): array
+    protected function extractData( $alias, array $params, array $settings): array
     {
-//        $alias = $object->getAlias();
-        $keys = array_keys($settings);
-        $alias = array_shift($keys);
         $defaults = $this->getDefaults($alias, $settings);
         $options = $this->mergeOptions($params, $defaults);
-        $options = $this->validateSort($object, $options);
+        $options = $this->validateSort(/*$object, */$options);
         $options = $this->checkLimit($options);
 
         $options += ['page' => 1, 'scope' => null];
@@ -276,6 +312,18 @@ class LayerPaginator
         [$finder, $options] = $this->_extractFinder($options);
 
         return compact('defaults', 'options', 'finder');
+
+//        $alias = $object->getAlias();
+//        $defaults = $this->getDefaults($alias, $settings);
+//        $options = $this->mergeOptions($params, $defaults);
+//        $options = $this->validateSort($object, $options);
+//        $options = $this->checkLimit($options);
+//
+//        $options += ['page' => 1, 'scope' => null];
+//        $options['page'] = (int)$options['page'] < 1 ? 1 : (int)$options['page'];
+//        [$finder, $options] = $this->_extractFinder($options);
+//
+//        return compact('defaults', 'options', 'finder');
     }
 
     /**
@@ -517,8 +565,9 @@ class LayerPaginator
      * @return array An array of options with sort + direction removed and
      *   replaced with order if possible.
      */
-    public function validateSort($object, array $options): array
+    public function validateSort(/*$object, */array $options): array
     {
+        return [];
         if (isset($options['sort'])) {
             $direction = null;
             if (isset($options['direction'])) {
