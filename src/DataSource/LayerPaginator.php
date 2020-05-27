@@ -53,6 +53,8 @@ class LayerPaginator
      *   parameters. Modifying this list will allow users to have more influence
      *   over pagination, be careful with what you permit.
      *
+     * @todo document optional layer specific settings
+     *
      * @var array
      */
     protected $_defaultConfig = [
@@ -60,6 +62,13 @@ class LayerPaginator
         'limit' => 20,
         'maxLimit' => 100,
         'whitelist' => ['limit', 'sort', 'page', 'direction'],
+//        optional individual settings for layers
+//        'tenants' => [
+//            'page' => 1,
+//            'limit' => 10,
+//            'maxLimit' => 50,
+//            'whitelist' => ['sort', 'page', 'direction'],
+//        ]
     ];
 
     /**
@@ -82,19 +91,19 @@ class LayerPaginator
 
         $layersToPaginate = array_intersect(array_keys($options), $stack->getLayerList());
         $rootName = $stack->getRootLayerName();
+        $defaults = [];
         $layerSettings = collection($layersToPaginate)
-            ->reduce(function($accum, $layer) use ($options, $rootName) {
-                $accum["{$rootName}__{$layer}"] = $options[$layer];
-                $accum["{$rootName}__{$layer}"]['scope'] = $layer;
+            ->reduce(function($accum, $layer) use ($options, $rootName, &$defaults) {
+                $scope = "{$rootName}__{$layer}";
+                $accum[$scope] = $options[$layer];
+                $accum[$scope]['scope'] = $scope;
+                $accum[$scope]['layer'] = $layer;
+                $defaults[$scope] = $this->getDefaults( $layer, $accum[$scope]);
                 return $accum;
             }, []);
         osd($layerSettings);
-        $data = [];
-        foreach ($layerSettings as $setting) {
-            $data[] = $this->extractData($setting['scope'], $request->getQueryParams(), $setting);
-        }
-        osd($data);
-        die;
+        osd($defaults);
+//        die;
 
 
         //get list of configured layers
@@ -104,17 +113,20 @@ class LayerPaginator
         //do the work on each stack
         //building the paging block on the detail scope name
 
-//        if ($stack instanceof StackSet) {
-//            osd('set');
-//            foreach ($stack->getData() as $stackEntity) {
+        if ($stack instanceof StackSet) {
+            osd('set');
+            foreach ($stack->getData() as $stackEntity) {
+                $packets = $this->spawnOptionSets($stackEntity, $options, $defaults);
 //                $this->paginate($stackEntity, $request->getQueryParams());
-//            }
-//        }
-//        else {
-//            osd('single');
+            }
+        }
+        else {
+            osd('single');
+            $packets = $this->spawnOptionSets($stack, $options, $defaults);
 //            $this->paginate($stack, $request->getQueryParams());
-//        }
+        }
 
+        osd($packets);
         die;
 
 //        osd(get_class($stack));
@@ -126,6 +138,20 @@ class LayerPaginator
 //        return $stackSet;
     }
 
+    public function spawnOptionSets($stack, $options, $defaults)
+    {
+        $params = Router::getRequest()->getQueryParams();
+        $rootName = $stack->getRootLayerName();
+        $layersToPaginate = array_intersect(array_keys($options), $stack->getLayerList());
+        $packets = [];
+
+        foreach ($layersToPaginate as $layer) {
+            $scope = "{$rootName}__{$layer}";
+            $key = "{$rootName}_{$stack->rootId()}_{$layer}";
+            $packets[$key] = $this->mergeOptions($params, $defaults[$scope]);
+        }
+        return $packets;
+    }
 
     /**
      * Handles automatic pagination of model records.
@@ -302,7 +328,7 @@ class LayerPaginator
      */
     protected function extractData( $alias, array $params, array $settings): array
     {
-        $defaults = $this->getDefaults($alias, $settings);
+        $defaults = $this->getDefaults($alias, $settings);// MOVED TO AN EARLY REDUCE/LOOP
         $options = $this->mergeOptions($params, $defaults);
         $options = $this->validateSort(/*$object, */$options);
         $options = $this->checkLimit($options);
@@ -526,7 +552,7 @@ class LayerPaginator
             $settings = $settings[$alias];
         }
 
-        $defaults = $this->getConfig();
+        $defaults = $this->getConfig($alias) ?? $this->getConfig();
         $maxLimit = $settings['maxLimit'] ?? $defaults['maxLimit'];
         $limit = $settings['limit'] ?? $defaults['limit'];
 
