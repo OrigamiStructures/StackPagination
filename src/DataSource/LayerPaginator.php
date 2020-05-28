@@ -89,6 +89,10 @@ class LayerPaginator
     {
         $request = Router::getRequest();
 
+        //get list of configured layers
+        //validate the layers
+        //make the defaults for each layer
+
         $layersToPaginate = array_intersect(array_keys($options), $stack->getLayerList());
         $rootName = $stack->getRootLayerName();
         $defaults = [];
@@ -106,10 +110,6 @@ class LayerPaginator
 //        die;
 
 
-        //get list of configured layers
-        //validate the layers
-        //make the defaults for each layer
-
         //do the work on each stack
         //building the paging block on the detail scope name
 
@@ -117,16 +117,15 @@ class LayerPaginator
             osd('set');
             foreach ($stack->getData() as $stackEntity) {
                 $packets = $this->spawnOptionSets($stackEntity, $options, $defaults);
-//                $this->paginate($stackEntity, $request->getQueryParams());
             }
         }
         else {
             osd('single');
             $packets = $this->spawnOptionSets($stack, $options, $defaults);
-//            $this->paginate($stack, $request->getQueryParams());
         }
 
         osd($packets);
+
         die;
 
 //        osd(get_class($stack));
@@ -149,6 +148,7 @@ class LayerPaginator
             $scope = "{$rootName}__{$layer}";
             $key = "{$rootName}_{$stack->rootId()}_{$layer}";
             $packets[$key] = $this->mergeOptions($request->getQuery($key) ?? [], $defaults[$scope]);
+            osd($stack->getRepository());die;
         }
         return $packets;
     }
@@ -328,7 +328,18 @@ class LayerPaginator
      */
     protected function extractData( $alias, array $params, array $settings): array
     {
-        $defaults = $this->getDefaults($alias, $settings);// MOVED TO AN EARLY REDUCE/LOOP
+        $layersToPaginate = $options = $rootName = 'to be set';
+
+        $defaults = collection($layersToPaginate)
+            ->reduce(function($accum, $layer) use ($options, $rootName) {
+                $scope = "{$rootName}__{$layer}";
+                $settings[$scope] = $options[$layer];
+                $settings[$scope]['scope'] = $scope;
+                $settings[$scope]['layer'] = $layer;
+                $accum[$scope] = $this->getDefaults( $layer, $accum[$scope]);
+                return $accum;
+            }, []);
+//        $defaults = $this->getDefaults($alias, $settings);// MOVED TO AN EARLY REDUCE/LOOP
         $options = $this->mergeOptions($params, $defaults);//MOVED TO AN EARLY LOOP
         $options = $this->validateSort(/*$object, */$options);
         $options = $this->checkLimit($options);
@@ -583,13 +594,13 @@ class LayerPaginator
      * The default order options provided to paginate() will be merged with the user's
      * requested sorting field/direction.
      *
+     * @param \Cake\Datasource\RepositoryInterface $object Repository object.
      * @param array $options The pagination options being used for this request.
      * @return array An array of options with sort + direction removed and
      *   replaced with order if possible.
      */
     public function validateSort($object, array $options): array
     {
-        return [];
         if (isset($options['sort'])) {
             $direction = null;
             if (isset($options['direction'])) {
