@@ -88,6 +88,7 @@ class LayerPaginator
     public function __invoke($stack, $options)
     {
         $request = Router::getRequest();
+        $this->extractData($stack, $request->getQueryParams(), $options);
 
         //get list of configured layers
         //validate the layers
@@ -100,8 +101,9 @@ class LayerPaginator
             ->reduce(function($accum, $layer) use ($options, $rootName, &$defaults) {
                 $scope = "{$rootName}__{$layer}";
                 $accum[$scope] = $options[$layer];
-                $accum[$scope]['scope'] = $scope;
-                $accum[$scope]['layer'] = $layer;
+                $accum[$scope] += [
+                    'scope' => $scope,
+                    'layer' => $layer];
                 $defaults[$scope] = $this->getDefaults( $layer, $accum[$scope]);
                 return $accum;
             }, []);
@@ -137,18 +139,22 @@ class LayerPaginator
 //        return $stackSet;
     }
 
+    public function scopeName($root, $layer, $id = '')
+    {
+        return "{$root}_{$id}_{$layer}";
+    }
     public function spawnOptionSets($stack, $options, $defaults)
     {
         $request = Router::getRequest();
-        $rootName = $stack->getRootLayerName();
-        $layersToPaginate = array_intersect(array_keys($options), $stack->getLayerList());
+        $root = $stack->getRootLayerName();
+        $layers = array_intersect(array_keys($options), $stack->getLayerList());
         $packets = [];
 
-        foreach ($layersToPaginate as $layer) {
-            $scope = "{$rootName}__{$layer}";
-            $key = "{$rootName}_{$stack->rootId()}_{$layer}";
+        foreach ($layers as $layer) {
+            $scope = $this->scopeName($root, $layer);
+            $key = $this->scopeName($root, $layer, $stack->rootId());
             $packets[$key] = $this->mergeOptions($request->getQuery($key) ?? [], $defaults[$scope]);
-            osd($stack->getRepository());die;
+//            osd($stack->());die;
         }
         return $packets;
     }
@@ -322,24 +328,82 @@ class LayerPaginator
     /**
      * Extract pagination data needed
      *
+     * @param StackEntity|StackSet $stack
      * @param array $params Request params
      * @param array $settings The settings/configuration used for pagination.
      * @return array Array with keys 'defaults', 'options' and 'finder'
      */
-    protected function extractData( $alias, array $params, array $settings): array
+    protected function extractData( $stack, array $params, array $settings): array
     {
-        $layersToPaginate = $options = $rootName = 'to be set';
+        $layers = array_intersect(array_keys($settings), $stack->getLayerList());
+        $root = $stack->getRootLayerName();
 
-        $defaults = collection($layersToPaginate)
-            ->reduce(function($accum, $layer) use ($options, $rootName) {
-                $scope = "{$rootName}__{$layer}";
-                $settings[$scope] = $options[$layer];
-                $settings[$scope]['scope'] = $scope;
-                $settings[$scope]['layer'] = $layer;
-                $accum[$scope] = $this->getDefaults( $layer, $accum[$scope]);
+        /*
+         * Work out defaults for each layer
+         * These will be keyed 'rootName__layerName'
+         */
+        $defaults = collection($layers)
+            ->reduce(function($accum, $layer) use ($settings, $root) {
+                $scope = $this->scopeName($root, $layer);
+                $settings[$scope] = $settings[$layer];
+                $settings[$scope] += ['scope' => $scope, 'layer' => $layer];
+                $accum[$scope] = $this->getDefaults( $layer, $settings[$scope] ?? []);
                 return $accum;
             }, []);
+
 //        $defaults = $this->getDefaults($alias, $settings);// MOVED TO AN EARLY REDUCE/LOOP
+
+        /*
+         * Merge defaults and queryArgs for each individual stackEntity's layers
+         * These will be keyed 'rootName_XX_layerName'
+         */
+        $queryArgs = Router::getRequest()->getQueryParams();
+        $mergeOptions = function ($stack, $layers, $root, $queryArgs, $defaults) {
+            $result = collection($layers)
+                ->reduce(function($accum, $layer) use ($root, $stack, $queryArgs, $defaults) {
+                    $scope = $this->scopeName($root, $layer);
+                    $key = $this->scopeName($root, $layer, $stack->rootId());
+                    $accum[$key] = $this->mergeOptions(
+                        $queryArgs[$key] ?? [],
+                        $defaults[$scope]
+                    );
+                    return $accum;
+                }, []);
+            return $result;
+        };
+
+        if ($stack instanceof StackSet) {
+            osd('set');
+            foreach ($stack->getData() as $stackEntity) {
+                $packets = $mergeOptions(
+                    $stackEntity,
+                    $layers,
+                    $root,
+                    $queryArgs,
+                    $defaults);
+            }
+        }
+        else {
+            osd('single');
+            $packets = $mergeOptions(
+                $stack,
+                $layers,
+                $root,
+                $queryArgs,
+                $defaults);
+        }
+
+        osd($packets);
+
+        /*
+         * list requested sort fields in $defaults for validation
+         */
+        collection($packets)
+            ->map(function($options, $key) use (&$defaults) {
+
+            });
+
+        die;
         $options = $this->mergeOptions($params, $defaults);//MOVED TO AN EARLY LOOP
         $options = $this->validateSort(/*$object, */$options);
         $options = $this->checkLimit($options);
@@ -539,6 +603,8 @@ class LayerPaginator
      */
     public function mergeOptions(array $params, array $settings): array
     {
+        osd($params);
+        osd($settings);
         $params = array_intersect_key($params, array_flip($this->getConfig('whitelist')));
 
         return array_merge($settings, $params);
