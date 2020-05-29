@@ -297,7 +297,7 @@ class LayerPaginator
          */
         $queryArgs = Router::getRequest()->getQueryParams();
         $mergeOptions = function ($stack, $layers, $root, $queryArgs, $defaults) {
-            $result = collection($layers)
+            return collection($layers)
                 ->reduce(function($accum, $layer) use ($root, $stack, $queryArgs, $defaults) {
                     $scope = $this->scopeName($root, $layer);
                     $key = $this->scopeName($root, $layer, $stack->rootId());
@@ -306,65 +306,50 @@ class LayerPaginator
                     );
                     return $accum;
                 }, []);
-            return $result;
         };
-        osd($defaults, 'defaults');
 
         if ($stack instanceof StackSet) {
-            osd('set');
             foreach ($stack->getData() as $entity) {
-                $packets = $mergeOptions(
+                $options = $mergeOptions(
                     $entity, $layers, $root, $queryArgs, $defaults);
             }
         }
         else {
-            osd('single');
-            $packets = $mergeOptions(
+            $options = $mergeOptions(
                 $stack, $layers, $root, $queryArgs, $defaults);
         }
-        osd($packets, 'packets');
 
         /*
          * list requested sort fields in $defaults for validation
+         * nothing is currently done to validate the existance of the sort columns
          */
         if ($stack instanceof StackSet) {
             $objects = $stack->getData();
         } else {
             $objects = [$stack->rootID() => $stack];
         }
-        $options = collection($packets)
-            ->map(function($options, $key) use ($objects) {
+        $options = collection($options)
+            ->map(function($localOpt, $key) use ($objects) {
                 preg_match('/_([0-9]*)_/', $key, $match);
-                return $this->validateSort($objects[$match[1]], $options);
+                return $this->validateSort($objects[$match[1]], $localOpt);
             })->toArray();
 
-        osd($options, 'options');
-
-        $options = collection($packets)
-            ->map(function($options, $key) use ($objects) {
-                return $this->checkLimit($options);
+        /*
+         * manage limit and page
+         * add any finder information
+         * that's a wrap
+         */
+        $options = collection($options)
+            ->map(function($localOpt, $key) use ($objects) {
+                $localOpt = $this->checkLimit($localOpt);
+                $localOpt += ['page' => 1];
+                $localOpt['page'] = (int)$localOpt['page'] < 1 ? 1 : (int)$localOpt['page'];
+                [$finder, $options] = $this->_extractFinder($localOpt);
+                $localOpt = $options + ['finder' => $finder];
+                return $localOpt;
             })->toArray();
 
-        osd($options, 'limit options');
-        die;
-
-        $options += ['page' => 1, 'scope' => null];
-        $options['page'] = (int)$options['page'] < 1 ? 1 : (int)$options['page'];
-        [$finder, $options] = $this->_extractFinder($options);
-
-        return compact('defaults', 'options', 'finder');
-
-//        $alias = $object->getAlias();
-//        $defaults = $this->getDefaults($alias, $settings);
-//        $options = $this->mergeOptions($params, $defaults);
-//        $options = $this->validateSort($object, $options);
-//        $options = $this->checkLimit($options);
-//
-//        $options += ['page' => 1, 'scope' => null];
-//        $options['page'] = (int)$options['page'] < 1 ? 1 : (int)$options['page'];
-//        [$finder, $options] = $this->_extractFinder($options);
-//
-//        return compact('defaults', 'options', 'finder');
+        return compact('defaults', 'options');
     }
 
     /**
@@ -498,6 +483,10 @@ class LayerPaginator
     /**
      * Extracts the finder name and options out of the provided pagination options.
      *
+     * This could be used to specify data result types or inject other
+     * parameters into the mix. It's pretty much a carry-over of
+     * the old query-focused code at this point
+     *
      * @param array $options the pagination options.
      * @return array An array containing in the first position the finder name
      *   and in the second the options to be passed to it.
@@ -610,6 +599,7 @@ class LayerPaginator
             if (isset($options['direction'])) {
                 $direction = strtolower($options['direction']);
             }
+            osd($direction);
             if (!in_array($direction, ['asc', 'desc'], true)) {
                 $direction = 'asc';
             }
@@ -650,9 +640,6 @@ class LayerPaginator
         }
 
         /* @var StackEntity $object */
-
-//        $sample = $object->getLayer($options['scope'])->toLayer()->element(1);
-//        $options['order'] = $this->_prefix($sample, $options['order'], $inWhitelist);
 
         return $options;
     }
