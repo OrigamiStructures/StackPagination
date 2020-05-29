@@ -92,6 +92,6 @@ class IndexFilterManagmentMiddleware implements MiddlewareInterface
 
         unset($session, $sessionData, $requestPath, $allowedPaths); //be a good middleware citizen
 
-        return $handler->handle($request, $handler);
+        return $handler->handle($request);
     }
 }
