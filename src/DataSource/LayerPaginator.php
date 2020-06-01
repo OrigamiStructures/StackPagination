@@ -211,13 +211,14 @@ class LayerPaginator
         osd('in');
 
         $data = $this->extractData($object, $params, $settings);
+        $objects = $data['objects'];
         osd($data);die;
-//        $query = $this->getQuery($object, $query, $data);
 
-        /* @var Query $query */
+        collection($data['$options'])
+            ->map(function($opts, $key) use ($objects) {
+                $id = (preg_match('/_([0-9]*)_/', $key, $match))[1];
 
-        $cleanQuery = clone $query;
-        $results = $query->all();
+            });
         $data['numResults'] = count($results); //all records
         $data['count'] = $this->getCount($cleanQuery, $data); //records in the current desired page
 
@@ -349,7 +350,7 @@ class LayerPaginator
                 return $localOpt;
             })->toArray();
 
-        return compact('defaults', 'options');
+        return compact('defaults', 'options', 'objects');
     }
 
     /**
