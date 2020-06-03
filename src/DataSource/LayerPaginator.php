@@ -28,6 +28,7 @@ use Cake\ORM\Query;
 use Cake\Routing\Router;
 use Cake\Utility\Hash;
 use Stacks\Model\Entity\StackEntity;
+use Stacks\Model\Lib\LayerAccessArgs;
 use Stacks\Model\Lib\LayerAccessProcessor;
 use Stacks\Model\Lib\StackSet;
 
@@ -89,7 +90,6 @@ class LayerPaginator
     {
         osd('invoke');
         $this->paginate($stack, Router::getRequest()->getQueryParams(), $options);
-        die;
         $request = Router::getRequest();
         $this->extractData($stack, $request->getQueryParams(), $options);
     }
@@ -212,15 +212,42 @@ class LayerPaginator
 
         $data = $this->extractData($object, $params, $settings);
         $objects = $data['objects'];
-        osd($data);die;
+//        osd($data);die;
 
-        collection($data['$options'])
-            ->map(function($opts, $key) use ($objects) {
-                $id = (preg_match('/_([0-9]*)_/', $key, $match))[1];
+        collection($data['options'])
+            ->map(function($opts, $key) use ($data) {
+                extract($data);// $defaults, $options, $objects
+                /* @var array $defaults
+                 * @var array $options
+                 * @var array $objects */
 
-            });
-        $data['numResults'] = count($results); //all records
-        $data['count'] = $this->getCount($cleanQuery, $data); //records in the current desired page
+                preg_match('/(.*)_([0-9]*)_(.*)/', $key, $match);
+                $defaultKey = $match[1] . '__' . $match[3];
+                $id = $match[2];
+                $layer = $match[3];
+                osd($defaults);
+                osd($options);
+                osd(isset($options));
+
+                $processor = $objects[$id]
+                    ->getLayer($layer);
+                $data['numResults'] = $processor->rawCount(); //all records
+                $argObj = $processor->find();
+                $this->addLayerFilter($key, $argObj);
+                $this->addLayerSort($options[$key], $defaults[$defaultKey], $argObj);
+                $this->addLayerSort($options[$key], $defaults[$defaultKey], $argObj);
+                $count = count(
+                    $processor
+                    ->find()
+                    ->specifyFilter()
+                    ->specifySorting()
+                    ->specifyPagination()
+                    ->toArray()
+                );
+                $data['count'] = $count; //records in the current desired page
+                die;
+
+            })->toArray();
 
         $pagingParams = $this->buildParams($data);
         $alias = $object->getAlias();
@@ -232,9 +259,14 @@ class LayerPaginator
             ]);
         }
 
-        return $results;
+        return /*$results*/;
     }
 
+    protected function addLayerFilter($key)
+    {
+        //read cached query and return 3 values
+
+    }
     /**
      * Get query for fetching paginated results.
      *
