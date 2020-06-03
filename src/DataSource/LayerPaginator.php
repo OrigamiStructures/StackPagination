@@ -18,6 +18,7 @@ declare(strict_types=1);
 namespace StackPagination\DataSource;
 
 use Cake\Core\InstanceConfigTrait;
+use Cake\Datasource\Exception\PageOutOfBoundsException;
 use Cake\Datasource\Paginator;
 use Cake\Datasource\QueryInterface;
 use Cake\Datasource\RepositoryInterface;
@@ -180,8 +181,8 @@ class LayerPaginator extends Paginator
      *   to paginate.
      * @param array $params Request params
      * @param array $settings The settings/configuration used for pagination.
-     * @return \Cake\Datasource\ResultSetInterface Query results
-     * @throws \Cake\Datasource\Exception\PageOutOfBoundsException
+     * @return ResultSetInterface Query results
+     * @throws PageOutOfBoundsException
      */
     public function paginate($object, array $params = [], array $settings = []): ResultSetInterface
     {
@@ -201,7 +202,7 @@ class LayerPaginator extends Paginator
                 $id = $match[2];
                 $layer = $match[3];
                 $dat['defaults'] = $data['defaults'][$defaultKey];
-                $dat['options'] = $data['options'][$key];
+                $dat['options'] = $opts;
 
                 $processor = $objects[$id]
                     ->getLayer($layer);
@@ -235,6 +236,11 @@ class LayerPaginator extends Paginator
 
     }
 
+    /**
+     * @param array|object|bool $options
+     * @param $defaults
+     * @param $argObj
+     */
     protected function addLayerSort($options, $defaults, $argObj)
     {
         $order = false;
@@ -263,33 +269,33 @@ class LayerPaginator extends Paginator
     /**
      * Get query for fetching paginated results.
      *
-     * @param \Cake\Datasource\RepositoryInterface $object Repository instance.
-     * @param \Cake\Datasource\QueryInterface|null $query Query Instance.
+     * @param RepositoryInterface $object Repository instance.
+     * @param QueryInterface|null $query Query Instance.
      * @param array $data Pagination data.
-     * @return \Cake\Datasource\QueryInterface
+     * @return QueryInterface
      */
-    protected function getQuery(RepositoryInterface $object, ?QueryInterface $query = null, array $data): QueryInterface
-    {
-        if ($query === null) {
-            $query = $object->find($data['finder'], $data['options']);
-        } else {
-            $query->applyOptions($data['options']);
-        }
-
-        return $query;
-    }
+//    protected function getQuery(RepositoryInterface $object, ?QueryInterface $query = null, array $data): QueryInterface
+//    {
+//        if ($query === null) {
+//            $query = $object->find($data['finder'], $data['options']);
+//        } else {
+//            $query->applyOptions($data['options']);
+//        }
+//
+//        return $query;
+//    }
 
     /**
      * Get total count of records.
      *
-     * @param \Cake\Datasource\QueryInterface $query Query instance.
+     * @param QueryInterface $query Query instance.
      * @param array $data Pagination data.
      * @return int|null
      */
-    protected function getCount(QueryInterface $query, array $data): ?int
-    {
-        return $query->count();
-    }
+//    protected function getCount(QueryInterface $query, array $data): ?int
+//    {
+//        return $query->count();
+//    }
 
     /**
      * Extract pagination data needed
@@ -335,6 +341,7 @@ class LayerPaginator extends Paginator
                 }, []);
         };
 
+        $options = [];
         if ($stack instanceof StackSet) {
             foreach ($stack->getData() as $entity) {
                 $options = $mergeOptions(
@@ -367,7 +374,7 @@ class LayerPaginator extends Paginator
          * that's a wrap
          */
         $options = collection($options)
-            ->map(function($localOpt, $key) use ($objects) {
+            ->map(function($localOpt) use ($objects) {
                 $localOpt = $this->checkLimit($localOpt);
                 $localOpt += ['page' => 1];
                 $localOpt['page'] = (int)$localOpt['page'] < 1 ? 1 : (int)$localOpt['page'];
@@ -614,10 +621,11 @@ class LayerPaginator extends Paginator
      * The default order options provided to paginate() will be merged with the user's
      * requested sorting field/direction.
      *
-     * @param \Cake\Datasource\RepositoryInterface $object Repository object.
+     * @param RepositoryInterface $object Repository object.
      * @param array $options The pagination options being used for this request.
      * @return array An array of options with sort + direction removed and
      *   replaced with order if possible.
+     * @noinspection PhpUnusedLocalVariableInspection
      */
     public function validateSort($object, array $options): array
     {
@@ -702,42 +710,41 @@ class LayerPaginator extends Paginator
     /**
      * Prefixes the field with the table alias if possible.
      *
+     * @param LayerAccessProcessor $object
      * @param array $order Order array.
      * @param bool $whitelisted Whether or not the field was whitelisted.
      * @return array Final order array.
      */
-    protected function _prefix($object, array $order, bool $whitelisted = false): array
-    {
-        /* @var LayerAccessProcessor $object */
-
-        $fields = is_null($object) ? false : $object->getVisible();
-
-        $tableOrder = [];
-        foreach ($order as $key => $value) {
-            if (is_numeric($key)) {
-                $tableOrder[] = $value;
-                continue;
-            }
-            $field = $key;
-
-            if (!$fields) {
-                $tableOrder[$field] = $value;
-                continue;
-            }
-
-            if ($whitelisted) {
-                if (in_array($field, $fields)) {
-                    $field = $field;
-                }
-                $tableOrder[$field] = $value;
-            } elseif (in_array($field, $fields)) {
-                $tableOrder[$field] = $value;
-            } elseif ($whitelisted) {
-                $tableOrder[$field] = $value;
-            }
-        }
-        return $tableOrder;
-    }
+//    protected function _prefix($object, array $order, bool $whitelisted = false): array
+//    {
+//        $fields = is_null($object) ? false : $object->getVisible();
+//
+//        $tableOrder = [];
+//        foreach ($order as $key => $value) {
+//            if (is_numeric($key)) {
+//                $tableOrder[] = $value;
+//                continue;
+//            }
+//            $field = $key;
+//
+//            if (!$fields) {
+//                $tableOrder[$field] = $value;
+//                continue;
+//            }
+//
+//            if ($whitelisted) {
+//                if (in_array($field, $fields)) {
+//                    $field = $field;
+//                }
+//                $tableOrder[$field] = $value;
+//            } elseif (in_array($field, $fields)) {
+//                $tableOrder[$field] = $value;
+//            } elseif ($whitelisted) {
+//                $tableOrder[$field] = $value;
+//            }
+//        }
+//        return $tableOrder;
+//    }
 
     /**
      * Check the limit parameter and ensure it's within the maxLimit bounds.
