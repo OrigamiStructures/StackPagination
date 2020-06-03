@@ -1,13 +1,16 @@
-<?php
+<?php /** @noinspection PhpUnused */
 
 
 namespace StackPagination\Controller\Component;
 
+use BadMethodCallException;
+use Cake\Controller\Component\FlashComponent;
 use Cake\Datasource\Exception\PageOutOfBoundsException;
 use Cake\Datasource\QueryInterface;
 use Cake\Datasource\ResultSetInterface;
 use Cake\Http\Response;
 use Cake\Utility\Hash;
+use Exception;
 use StackPagination\DataSource\LayerPaginator;
 use Stacks\Model\Table\StacksTable;
 use Cake\Controller\Component\PaginatorComponent as CorePaginator;
@@ -20,6 +23,7 @@ use Cake\ORM\TableRegistry;
  * Class PaginatorComponent
  * @package StackPagination\Controller\Component
  * @property SeedFilterComponent $SeedFilter
+ * @property FlashComponent $Flash
  */
 class PaginatorComponent extends CorePaginator
 {
@@ -138,6 +142,7 @@ class PaginatorComponent extends CorePaginator
     /**
      * Redirect to last page when request exceeds page limit
      *
+     * @param string $scope
      * @return array $url the url params-array for redirect()
      */
     private function showLastPage($scope)
@@ -160,7 +165,7 @@ class PaginatorComponent extends CorePaginator
             ],
             $this->getController()->getRequest()->getParam('pass'),
             $qParams
-            );
+        );
 
         $this->Flash->error("Redirected to page $lastPage. Page $reqPage did not exist.");
         return $url;
@@ -174,7 +179,7 @@ class PaginatorComponent extends CorePaginator
     {
         $blocks = collection($this->getController()->getRequest()->getAttribute('paging'));
         /* This drops a top-level key and can't be a filter */
-        return $blocks->reduce(function ($result, $block, $key) use ($scope) {
+        return $blocks->reduce(function ($result, $block) use ($scope) {
             if ($block['scope'] == $scope) {
                 $result = $block;
             }
@@ -203,7 +208,8 @@ class PaginatorComponent extends CorePaginator
                 $Table = TableRegistry::getTableLocator()->get($StackTable, []);
             }
             elseif (is_array($tableOption)) {
-                $name = array_shift(array_keys($tableOption));
+                $keys = array_keys($tableOption);
+                $name = array_shift($keys);
                 $StackTable = $name;
                 $Table = TableRegistry::getTableLocator()->get($StackTable, $tableOption[$name]);
             }
@@ -212,31 +218,34 @@ class PaginatorComponent extends CorePaginator
                 $Table = $tableOption;
             }
             else {
-                throw new \Exception();
+                throw new Exception();
             }
 
             return array($StackTable, $Table);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $msg = 'The "tableName" key was not set or incorrect. It is required and must
             be a string (stackTable name), array (["stackTableName" => [config]], or StackTable {object}.';
-            throw new \BadMethodCallException($msg);
+            throw new BadMethodCallException($msg);
         }
     }
 
-    public function l_extractData($object, array $params, array $settings)
-    {
-        $alias = 'default';
-        $defaults = $this->getDefaults($alias, $settings);
-        $options = $this->mergeOptions($params, $defaults);
-        $options = $this->validateSort($object, $options);
-        $options = $this->checkLimit($options);
-
-        $options += ['page' => 1, 'scope' => null];
-        $options['page'] = (int)$options['page'] < 1 ? 1 : (int)$options['page'];
-        [$finder, $options] = $this->_extractFinder($options);
-
-        return compact('defaults', 'options', 'finder');
-
-    }
+    /**
+     * @noinspection PhpUnused
+     */
+//    public function l_extractData($object, array $params, array $settings)
+//    {
+//        $alias = 'default';
+//        $defaults = $this->getDefaults($alias, $settings);
+//        $options = $this->mergeOptions($params, $defaults);
+//        $options = $this->validateSort($object, $options);
+//        $options = $this->checkLimit($options);
+//
+//        $options += ['page' => 1, 'scope' => null];
+//        $options['page'] = (int)$options['page'] < 1 ? 1 : (int)$options['page'];
+//        [$finder, $options] = $this->_extractFinder($options);
+//
+//        return compact('defaults', 'options', 'finder');
+//
+//    }
 }
