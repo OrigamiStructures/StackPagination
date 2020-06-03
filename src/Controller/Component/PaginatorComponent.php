@@ -96,6 +96,21 @@ class PaginatorComponent extends CorePaginator
         }
     }
 
+    /**
+     * Direct call for layer pagination
+     *
+     * assumes top lever layer keys on settings:
+     * [
+     *   'tenants' => ['page' => 3],
+     *   'warehouse_workers' => ['limit' => 10]
+     * ]
+     *
+     * @todo $object should tolerate a StackSet too
+     *
+     * @param object $object
+     * @param array $settings
+     * @return ResultSetInterface
+     */
     public function layerPaginate(object $object, array $settings = []): ResultSetInterface
     {
         $request = $this->_registry->getController()->getRequest();
