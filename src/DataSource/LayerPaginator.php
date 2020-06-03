@@ -90,7 +90,7 @@ class LayerPaginator
     public function __invoke($stack, $options)
     {
         osd('invoke');
-        $this->paginate($stack, Router::getRequest()->getQueryParams(), $options);
+        return $this->paginate($stack, Router::getRequest()->getQueryParams(), $options);
         $request = Router::getRequest();
         $this->extractData($stack, $request->getQueryParams(), $options);
     }
