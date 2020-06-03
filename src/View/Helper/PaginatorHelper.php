@@ -5,9 +5,12 @@ namespace StackPagination\View\Helper;
 
 use Cake\View\Helper\PaginatorHelper as BaseHelper;
 use Stacks\Model\Entity\StackEntity;
+use StackPagination\Lib\ScopeNameTrait;
 
 class PaginatorHelper extends BaseHelper
 {
+
+    use ScopeNameTrait;
 
     /**
      * Generate a scope/model identifier for a paginated layer
@@ -18,7 +21,7 @@ class PaginatorHelper extends BaseHelper
      */
     public function scope($stack, $layer)
     {
-        $result = "{$stack->getRootLayerName()}-{$stack->rootId()}-$layer";
+        $result = "{$stack->getRootLayerName()}_{$stack->rootId()}_$layer";
         return $result;
     }
 }

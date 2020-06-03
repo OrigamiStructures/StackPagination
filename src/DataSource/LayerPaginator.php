@@ -17,22 +17,18 @@ declare(strict_types=1);
 
 namespace StackPagination\DataSource;
 
-use Cake\Core\Exception\Exception;
 use Cake\Core\InstanceConfigTrait;
-use Cake\Datasource\Exception\PageOutOfBoundsException;
 use Cake\Datasource\Paginator;
-use Cake\Datasource\PaginatorInterface;
 use Cake\Datasource\QueryInterface;
 use Cake\Datasource\RepositoryInterface;
 use Cake\Datasource\ResultSetInterface;
-use Cake\ORM\Query;
 use Cake\Routing\Router;
 use Stacks\Constants\LayerCon;
 use Stacks\Model\Lib\Layer;
 use Stacks\Model\Entity\StackEntity;
-use Stacks\Model\Lib\LayerAccessArgs;
 use Stacks\Model\Lib\LayerAccessProcessor;
 use Stacks\Model\Lib\StackSet;
+use StackPagination\Lib\ScopeNameTrait;
 
 /**
  * This class is used to handle automatic model data pagination.
@@ -41,7 +37,7 @@ class LayerPaginator extends Paginator
 {
 
     use InstanceConfigTrait;
-
+    use ScopeNameTrait;
 
     /**
      * Default pagination settings.
@@ -80,11 +76,6 @@ class LayerPaginator extends Paginator
      * @var array
      */
     protected $_pagingParams = [];
-
-    public function scopeName($root, $layer, $id = '')
-    {
-        return "{$root}_{$id}_{$layer}";
-    }
 
     /**
      * Handles automatic pagination of model records.
