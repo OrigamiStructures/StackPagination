@@ -26,7 +26,8 @@ use Cake\Datasource\RepositoryInterface;
 use Cake\Datasource\ResultSetInterface;
 use Cake\ORM\Query;
 use Cake\Routing\Router;
-use Cake\Utility\Hash;
+use Stacks\Constants\LayerCon;
+use Stacks\Model\Lib\Layer;
 use Stacks\Model\Entity\StackEntity;
 use Stacks\Model\Lib\LayerAccessArgs;
 use Stacks\Model\Lib\LayerAccessProcessor;
@@ -207,15 +208,15 @@ class LayerPaginator
      */
     public function paginate($object, array $params = [], array $settings = []): ResultSetInterface
     {
+        osd(get_class($object));
 
         osd('in');
 
         $data = $this->extractData($object, $params, $settings);
-        $objects = $data['objects'];
-//        osd($data);die;
 
         collection($data['options'])
-            ->map(function($opts, $key) use ($data) {
+            ->map(function($opts, $key) use (&$data, $object) {
+                $dat = [];
                 extract($data);// $defaults, $options, $objects
                 /* @var array $defaults
                  * @var array $options
@@ -225,48 +226,59 @@ class LayerPaginator
                 $defaultKey = $match[1] . '__' . $match[3];
                 $id = $match[2];
                 $layer = $match[3];
-                osd($defaults);
-                osd($options);
-                osd(isset($options));
+                $dat['defaults'] = $data['defaults'][$defaultKey];
+                $dat['options'] = $data['options'][$key];
 
                 $processor = $objects[$id]
                     ->getLayer($layer);
-                $data['numResults'] = $processor->rawCount(); //all records
+                $dat['count'] = $processor->rawCount(); //all records
                 $argObj = $processor->find();
                 $this->addLayerFilter($key, $argObj);
                 $this->addLayerSort($options[$key], $defaults[$defaultKey], $argObj);
-                $this->addLayerSort($options[$key], $defaults[$defaultKey], $argObj);
-                $count = count(
-                    $processor
-                    ->find()
-                    ->specifyFilter()
-                    ->specifySorting()
-                    ->specifyPagination()
-                    ->toArray()
-                );
-                $data['count'] = $count; //records in the current desired page
-                die;
+                $this->addLayerPagination($options[$key], $defaults[$defaultKey], $argObj);
+                $results = $argObj->toArray();
+                $dat['numResults'] = count($argObj->toArray()); //records in the current desired page
+                $object->element($id, LayerCon::LAYERACC_ID)->$layer = new Layer($results);
+
+                $pagingParams = $this->buildParams($dat);
+                $this->_pagingParams[$key] = $pagingParams;
 
             })->toArray();
 
-        $pagingParams = $this->buildParams($data);
-        $alias = $object->getAlias();
-        $this->_pagingParams = [$alias => $pagingParams];
-        if ($pagingParams['requestedPage'] > $pagingParams['page']) {
-            throw new PageOutOfBoundsException([
-                'requestedPage' => $pagingParams['requestedPage'],
-                'pagingParams' => $this->_pagingParams,
-            ]);
-        }
-
-        return /*$results*/;
+        return $object;
     }
 
-    protected function addLayerFilter($key)
+    protected function addLayerFilter($key, $argObj)
     {
         //read cached query and return 3 values
 
     }
+
+    protected function addLayerSort($options, $defaults, $argObj)
+    {
+        $order = false;
+        if (isset($options['order'])) {
+            $order = $options['order'];
+        }
+        elseif (isset($defaults['order'])) {
+            $order = $defaults['order'];
+        }
+        if ($order && !empty($order)) {
+            $argObj->specifySort(key($order), current($order) == 'asc' ? SORT_ASC : SORT_DESC);
+        }
+    }
+
+    protected function addLayerPagination($options, $defaults, $argObj)
+    {
+        if (isset($options['page'])) { $page = $options['page']; }
+        else { $page = $defaults['page']; }
+
+        if (isset($options['limit'])) { $limit = $options['limit']; }
+        else { $limit = $defaults['limit']; }
+
+        $argObj->specifyPagination($page, $limit);
+    }
+
     /**
      * Get query for fetching paginated results.
      *
@@ -337,6 +349,7 @@ class LayerPaginator
                     $accum[$key] = $this->mergeOptions(
                         $queryArgs[$key] ?? [], $defaults[$scope]
                     );
+                    $accum[$key]['scope'] = $key;
                     return $accum;
                 }, []);
         };
@@ -354,7 +367,7 @@ class LayerPaginator
 
         /*
          * list requested sort fields in $defaults for validation
-         * nothing is currently done to validate the existance of the sort columns
+         * nothing is currently done to validate the existence of the sort columns
          */
         if ($stack instanceof StackSet) {
             $objects = $stack->getData();
@@ -412,7 +425,7 @@ class LayerPaginator
         $paging += [
             'limit' => $data['defaults']['limit'] != $limit ? $limit : null,
             'scope' => $data['options']['scope'],
-            'finder' => $data['finder'],
+            'finder' => $data['options']['finder'],
         ];
 
         return $paging;
@@ -632,7 +645,6 @@ class LayerPaginator
             if (isset($options['direction'])) {
                 $direction = strtolower($options['direction']);
             }
-            osd($direction);
             if (!in_array($direction, ['asc', 'desc'], true)) {
                 $direction = 'asc';
             }
@@ -743,7 +755,6 @@ class LayerPaginator
                 $tableOrder[$field] = $value;
             }
         }
-        osd($tableOrder, 'table order');
         return $tableOrder;
     }
 
