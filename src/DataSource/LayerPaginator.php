@@ -210,9 +210,9 @@ class LayerPaginator extends Paginator
                 $this->addLayerFilter($key, $argObj);
                 $this->addLayerSort($options[$key], $defaults[$defaultKey], $argObj);
                 $this->addLayerPagination($options[$key], $defaults[$defaultKey], $argObj);
-                $results = $argObj->toArray();
-                $dat['numResults'] = count($argObj->toArray()); //records in the current desired page
-                $object->element($id, LayerCon::LAYERACC_ID)->$layer = new Layer($results);
+                $results = $dat['count'] > 0 ? $argObj->toArray() : [];
+                $dat['numResults'] = count($results); //records in the current desired page
+                $object->element($id, LayerCon::LAYERACC_ID)->$layer = new Layer($results, $layer);
 
                 $pagingParams = $this->buildParams($dat);
                 $this->_pagingParams[$key] = $pagingParams;
