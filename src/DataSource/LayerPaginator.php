@@ -20,6 +20,7 @@ namespace StackPagination\DataSource;
 use Cake\Core\Exception\Exception;
 use Cake\Core\InstanceConfigTrait;
 use Cake\Datasource\Exception\PageOutOfBoundsException;
+use Cake\Datasource\Paginator;
 use Cake\Datasource\PaginatorInterface;
 use Cake\Datasource\QueryInterface;
 use Cake\Datasource\RepositoryInterface;
@@ -36,7 +37,7 @@ use Stacks\Model\Lib\StackSet;
 /**
  * This class is used to handle automatic model data pagination.
  */
-class LayerPaginator
+class LayerPaginator extends Paginator
 {
 
     use InstanceConfigTrait;
@@ -242,6 +243,13 @@ class LayerPaginator
 
                 $pagingParams = $this->buildParams($dat);
                 $this->_pagingParams[$key] = $pagingParams;
+                /*@todo should we reset the target page here to make the params accurate?*/
+//                if ($pagingParams['requestedPage'] > $pagingParams['page']) {
+//                    throw new PageOutOfBoundsException([
+//                        'requestedPage' => $pagingParams['requestedPage'],
+//                        'pagingParams' => $this->_pagingParams,
+//                    ]);
+//                }
 
             })->toArray();
 
