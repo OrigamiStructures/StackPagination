@@ -81,21 +81,6 @@ class LayerPaginator extends Paginator
      */
     protected $_pagingParams = [];
 
-    /**
-     * Perform Layer filtering, sorting, and pagination
-     *
-     * @param $stack StackSet|StackEntity
-     * @param $options array
-     * @return mixed
-     */
-    public function __invoke($stack, $options)
-    {
-        osd('invoke');
-        return $this->paginate($stack, Router::getRequest()->getQueryParams(), $options);
-        $request = Router::getRequest();
-        $this->extractData($stack, $request->getQueryParams(), $options);
-    }
-
     public function scopeName($root, $layer, $id = '')
     {
         return "{$root}_{$id}_{$layer}";
@@ -209,9 +194,6 @@ class LayerPaginator extends Paginator
      */
     public function paginate($object, array $params = [], array $settings = []): ResultSetInterface
     {
-        osd(get_class($object));
-
-        osd('in');
 
         $data = $this->extractData($object, $params, $settings);
 
