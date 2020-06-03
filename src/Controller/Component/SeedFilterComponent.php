@@ -4,6 +4,8 @@
 namespace StackPagination\Controller\Component;
 
 
+use Cake\Controller\ComponentRegistry;
+use Cake\ORM\Table;
 use StackPagination\Exception\BadClassConfigurationException;
 use Cake\Controller\Component;
 use Cake\ORM\TableRegistry;
@@ -14,29 +16,14 @@ class SeedFilterComponent extends Component
 {
 
     /**
-     * @var bool|string
-     */
-    protected $tableAlias = false;
-
-    /**
-     * @var bool|\Cake\ORM\Table
+     * @var bool|Table
      */
     protected $table = false;
 
     /**
-     * @var bool|string
-     */
-    protected $formClass = false;
-
-    /**
-     * @var bool|\Cake\Form\Form
+     * @var bool|Form
      */
     protected $form = false;
-
-    /**
-     * @var bool|string
-     */
-    protected $filterScope = false;
 
     /**
      * @var array
@@ -143,15 +130,15 @@ class SeedFilterComponent extends Component
         return $query;
     }
 
-    public function exportFormContext($name)
-    {
-
-    }
+//    public function exportFormContext($name)
+//    {
+//
+//    }
 
     /**
      * Get the table instance
      *
-     * @return bool|\Cake\ORM\Table
+     * @return bool|Table
      */
     protected function getTable()
     {
@@ -184,10 +171,11 @@ class SeedFilterComponent extends Component
      *  'filterScope' => null
      * ]
      * @param $config
+     * @noinspection PhpUnusedPrivateMethodInspection
      */
     private function validateConfig($config): void
     {
-        // we're only alowing string config values
+        // we're only allowing string config values
         $defaultKeys = array_keys($this->_defaultConfig);
         $configErrors = collection($config())->reduce(
             function ($errors, $value, $key) use ($defaultKeys) {
