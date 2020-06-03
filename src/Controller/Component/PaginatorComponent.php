@@ -92,7 +92,8 @@ class PaginatorComponent extends CorePaginator
     public function pagingateLayers($stackSet, $options)
     {
         if (isset($options['paging']['layers'])) {
-            (new LayerPaginator())($stackSet, $options['paging']['layers']);
+            $this->layerPaginate($stackSet, $options['paging']['layers']);
+//            (new LayerPaginator())($stackSet, $options['paging']['layers']);
         }
     }
 
