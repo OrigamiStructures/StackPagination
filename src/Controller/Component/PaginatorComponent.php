@@ -93,22 +93,23 @@ class PaginatorComponent extends CorePaginator
     {
         if (isset($options['paging']['layers'])) {
             (new LayerPaginator())($stackSet, $options['paging']['layers']);
-            osd($options['paging']['layers']);
         }
     }
 
     public function layerPaginate(object $object, array $settings = []): ResultSetInterface
     {
         $request = $this->_registry->getController()->getRequest();
+        $oldPaginator = $this->_paginator;
+        $this->setPaginator(new LayerPaginator());
 
         try {
-            $results = (new LayerPaginator())->paginate(
+            $results = $this->_paginator->paginate(
                 $object,
                 $request->getQueryParams(),
                 $settings
             );
-
             $this->_setPagingParams();
+            $this->setPaginator($oldPaginator);
         } catch (PageOutOfBoundsException $e) {
             $this->_setPagingParams();
 
