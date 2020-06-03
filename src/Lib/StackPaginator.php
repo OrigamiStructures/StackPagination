@@ -108,8 +108,10 @@ class StackPaginator extends Paginator {
 		return $object($paginatorCallable);
     }
 
-    public function paginateLayers($stackSet, $settings)
-    {
-        return (new LayerPaginator())($stackSet, $settings);
-    }
+//    public function paginateLayers($stackSet, $settings)
+//    {
+//        $result = (new LayerPaginator())($stackSet, $settings);
+//        $this->_setPagingParams();
+//        return $result;
+//    }
 }
