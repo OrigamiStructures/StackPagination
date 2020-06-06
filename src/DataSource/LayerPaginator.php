@@ -32,28 +32,97 @@ use Stacks\Model\Lib\StackSet;
 use StackPagination\Lib\ScopeNameTrait;
 
 /**
- * This class is used to handle automatic model data pagination.
+ * This class is used to paginate layer data in stack entities.
+ *
+ * Cake-normal pagination works off an evolving query. But stack entities arrive
+ * with all their layer data included.
+ *
+ * So the goal of this code is to modify the layers included in the provided stacks
+ * and return those stacks with only the layer-pages required and with all the
+ * Cake-normal background data. In particular, there is an array of 'paging' data
+ * that is used by the PaginatorHelper to implement the paging tools and page
+ * link creation.
+ *
+ * This code is written over the template of Cake\Datasource\Paginator which is
+ * the normal handler of a controllers $this->paginate(query, settings) calls.
+ * Whenever possible, parent properties and processes are used in an effort to
+ * exactly match the returned 'paging' data and settings features.
+ *
+ * To reach this paginator you must have the StackPagination plugin installed.
+ * Then, from the controller you can make one of three calls from your controller
+ * depending on the structure of your settings array.
+ * @todo clean up this call and naming mess
+ *
+ * If you have
+ * $settings = [
+ *     normal-query-settings-keys,
+ *     'layer' => [
+ *         'layerNameOne' => [layer-settings-keys],
+ *         'layerNameTwo' => [layer-settings-keys],
+ *     ]
+ * ]
+ * then you will use one of these calls:
+ *
+ * $this->Paginator->block(query, settings) //for a page of stacks with paginated layers
+ * $this->Paginator->paginateLayers(StackSet|StackEntity, settings) //to paginate the layer data
+ *
+ * If you have only the array of layer settings (the value of 'layer' in the previous example)
+ * then you can call:
+ *
+ * $this->Paginator->layerPaginate(StackSet|StackEntity, settings)
+ *
+ * As with the Cake-normal pagination this paginator works from a blending of
+ * pre-established defaults, settings passed as an argument on the call, and
+ * query arguments in the Request. In combination they explain how to paginate the data.
+ *
+ * Where query arguments exits they will prevail. When a query argument is missing
+ * the corresponding 'setting' value will be used if available. Last in precedence
+ * is the defaultConfig values.
+ *
  */
 class LayerPaginator extends Paginator
 {
 
-    use InstanceConfigTrait;
+    /**
+     * Cake-normal settings data uses a 'model' key to determine query it should apply to.
+     * It also uses a 'scope' key which plays a role in query argument naming.
+     *
+     * StackPagination synchronizes the values and only uses the term 'scope'.
+     *
+     * This scope value is the name coordinates the various streams of settings that
+     * lead to pagination and which associates tools on the page with the displayed
+     * data they refer to. A VERY IMPORTANT VALUE in other words.
+     *
+     * When paginating layer data, the resulting 'paging' array refers to
+     * the layer of a specific record of a specific kind. So the scope value for
+     * layer pagination must tell us three things:
+     *
+     * 1. what kind of stack
+     * 2. which specific record of that kind
+     * 3. which layer in the stack.
+     *
+     * When default config data is being prepared, it will refer to any layer
+     * of a specific type regardless of which entity it is in. In this case
+     * the scope value will
+     *
+     * This trait provides a method to make the name
+     */
     use ScopeNameTrait;
 
     /**
-     * Default pagination settings.
+     * @todo defaults can't be set yet, only hard-coded into this class. Because of the
+     *     way paginator datasources are injected into the component a setter will have to
+     *     be written on the component to make this work
      *
-     * When calling paginate() these settings will be merged with the configuration
-     * you provide.
-     *
-     * - `maxLimit` - The maximum limit users can choose to view. Defaults to 100
-     * - `limit` - The initial number of items per page. Defaults to 20.
-     * - `page` - The starting page, defaults to 1.
-     * - `whitelist` - A list of parameters users are allowed to set using request
-     *   parameters. Modifying this list will allow users to have more influence
-     *   over pagination, be careful with what you permit.
+     * To insure all requested data can be paginated even when there are no passed
+     * settings or query arguments, a list of defaults is maintained as config data.
+     * These follow exactly the same pattern as Cake-normal pagination defaults
+     * and this property could be omitted so the parent values are used.
      *
      * @todo document optional layer specific settings
+     *
+     * The standard top-level keys will apply to all layers. It is possible
+     * to add layer-name keys that hold an array of layer specific values.
      *
      * @var array
      */
@@ -72,113 +141,10 @@ class LayerPaginator extends Paginator
     ];
 
     /**
-     * Paging params after pagination operation is done.
-     *
-     * @var array
-     */
-    protected $_pagingParams = [];
-
-    /**
      * Handles automatic pagination of model records.
      *
-     * ### Configuring pagination
      *
-     * When calling `paginate()` you can use the $settings parameter to pass in
-     * pagination settings. These settings are used to build the queries made
-     * and control other pagination settings.
-     *
-     * If your settings contain a key with the current table's alias. The data
-     * inside that key will be used. Otherwise the top level configuration will
-     * be used.
-     *
-     * ```
-     *  $settings = [
-     *    'limit' => 20,
-     *    'maxLimit' => 100
-     *  ];
-     *  $results = $paginator->paginate($table, $settings);
-     * ```
-     *
-     * The above settings will be used to paginate any repository. You can configure
-     * repository specific settings by keying the settings with the repository alias.
-     *
-     * ```
-     *  $settings = [
-     *    'Articles' => [
-     *      'limit' => 20,
-     *      'maxLimit' => 100
-     *    ],
-     *    'Comments' => [ ... ]
-     *  ];
-     *  $results = $paginator->paginate($table, $settings);
-     * ```
-     *
-     * This would allow you to have different pagination settings for
-     * `Articles` and `Comments` repositories.
-     *
-     * ### Controlling sort fields
-     *
-     * By default CakePHP will automatically allow sorting on any column on the
-     * repository object being paginated. Often times you will want to allow
-     * sorting on either associated columns or calculated fields. In these cases
-     * you will need to define a whitelist of all the columns you wish to allow
-     * sorting on. You can define the whitelist in the `$settings` parameter:
-     *
-     * ```
-     * $settings = [
-     *   'Articles' => [
-     *     'finder' => 'custom',
-     *     'sortWhitelist' => ['title', 'author_id', 'comment_count'],
-     *   ]
-     * ];
-     * ```
-     *
-     * Passing an empty array as whitelist disallows sorting altogether.
-     *
-     * ### Paginating with custom finders
-     *
-     * You can paginate with any find type defined on your table using the
-     * `finder` option.
-     *
-     * ```
-     *  $settings = [
-     *    'Articles' => [
-     *      'finder' => 'popular'
-     *    ]
-     *  ];
-     *  $results = $paginator->paginate($table, $settings);
-     * ```
-     *
-     * Would paginate using the `find('popular')` method.
-     *
-     * You can also pass an already created instance of a query to this method:
-     *
-     * ```
-     * $query = $this->Articles->find('popular')->matching('Tags', function ($q) {
-     *   return $q->where(['name' => 'CakePHP'])
-     * });
-     * $results = $paginator->paginate($query);
-     * ```
-     *
-     * ### Scoping Request parameters
-     *
-     * By using request parameter scopes you can paginate multiple queries in
-     * the same controller action:
-     *
-     * ```
-     * $articles = $paginator->paginate($articlesQuery, ['scope' => 'articles']);
-     * $tags = $paginator->paginate($tagsQuery, ['scope' => 'tags']);
-     * ```
-     *
-     * Each of the above queries will use different query string parameter sets
-     * for pagination data. An example URL paginating both results would be:
-     *
-     * ```
-     * /dashboard?articles[page]=1&tags[page]=2
-     * ```
-     *
-     * @param StackEntity $object The repository or query
-     *   to paginate.
+     * @param StackEntity $object The repository or query to paginate.
      * @param array $params Request params
      * @param array $settings The settings/configuration used for pagination.
      * @return ResultSetInterface Query results
@@ -265,25 +231,6 @@ class LayerPaginator extends Paginator
 
         $argObj->specifyPagination($page, $limit);
     }
-
-    /**
-     * Get query for fetching paginated results.
-     *
-     * @param RepositoryInterface $object Repository instance.
-     * @param QueryInterface|null $query Query Instance.
-     * @param array $data Pagination data.
-     * @return QueryInterface
-     */
-//    protected function getQuery(RepositoryInterface $object, ?QueryInterface $query = null, array $data): QueryInterface
-//    {
-//        if ($query === null) {
-//            $query = $object->find($data['finder'], $data['options']);
-//        } else {
-//            $query->applyOptions($data['options']);
-//        }
-//
-//        return $query;
-//    }
 
     /**
      * Get total count of records.
