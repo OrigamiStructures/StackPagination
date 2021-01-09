@@ -16,7 +16,7 @@ interface FilteringInterface
      *
      * This method both prepares the values for the form that
      * is displayed and applies current or save filter requests
-     * to the evoloving paginated query.
+     * to the evolving paginated query.
      *
      * The method must
      *  - if there is post/put data
