@@ -96,25 +96,36 @@ class SeedFilterComponent extends Component
         $Session = $Request->getSession();
         $Table = $this->getTable();
         $Filter = $this->getForm();
+        $filter = $Session->read('filter');
 
         /**
          * This one value will go out to render the page
          * It may go as is or be reassigned post data which
          * might carry error reporting
          */
-        $formContext = $Table->newEntity([]);
+        $formContext = empty($Request->getData()) ? $filter['data'] : $Request->getData(); //$Table->newEntity([]);
+//        debug($formContext);
+//        debug($Request->is(['post', 'put']));
+//        debug(!empty($formContext));
+//        debug(($Request->is(['post', 'put']) || !empty($formContext)));
+//        debug(($formContext['pagingScope'] ?? '') == $scope);
+//        debug($Filter->execute((array) $formContext));
 
-        if ($Request->is(['post', 'put'])
-            && $Request->getData('pagingScope') == $scope
-            && $Filter->execute($Request->getData())
+        if (($Request->is(['post', 'put']) || !empty($formContext))
+            && $formContext['pagingScope'] ?? '' == $scope
+            && $Filter->execute((array) $formContext)
         ) {
             $query->where($Filter->conditions);
-            $filter = $Session->read('filter');
-            $filter['path'] = $this->getController()->getRequest()->getParam('controller')
-                . '_' . $this->getController()->getRequest()->getParam('action');
-            $filter['conditions'][$scope] = $Filter->conditions;
+            $filter = array_merge(
+                $filter,
+                [
+                    'path' => $this->endPointIdentifier(),
+                    'conditions' => ['scope' => $Filter->conditions],
+                    'data' => $formContext,
+                ]
+            );
             $Session->write('filter', $filter);
-            $formContext = $Request->getData();
+//            $formContext = $Request->getData();
 //            osd($Filter->conditions, 'doing new post data for ' . $scope);
         }
         else {
@@ -159,6 +170,15 @@ class SeedFilterComponent extends Component
             ?? 'App\Filter\\' . $this->getConfig('tableAlias') . 'Filter';
         $this->form = new $class();
         return $this->form;
+    }
+
+    /**
+     * @return string
+     */
+    protected function endPointIdentifier(): string
+    {
+        return $this->getController()->getRequest()->getParam('controller')
+            . '_' . $this->getController()->getRequest()->getParam('action');
     }
 
     /**
