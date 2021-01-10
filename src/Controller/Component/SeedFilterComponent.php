@@ -94,9 +94,8 @@ class SeedFilterComponent extends Component
     {
         $Request = $this->getController()->getRequest();
         $Session = $Request->getSession();
-        $Table = $this->getTable();
         $Filter = $this->getForm();
-        $filter = $Session->read('filter');
+        $filter = $Session->read('filter') ?? [];
 
         /**
          * This one value will go out to render the page
@@ -112,7 +111,7 @@ class SeedFilterComponent extends Component
 //        debug($Filter->execute((array) $formContext));
 
         if (($Request->is(['post', 'put']) || !empty($formContext))
-            && $formContext['pagingScope'] ?? '' == $scope
+            && ($formContext['pagingScope'] ?? '') == $scope
             && $Filter->execute((array) $formContext)
         ) {
             $query->where($Filter->conditions);
@@ -120,31 +119,20 @@ class SeedFilterComponent extends Component
                 $filter,
                 [
                     'path' => $this->endPointIdentifier(),
-                    'conditions' => ['scope' => $Filter->conditions],
+                    'conditions' => [$scope => $Filter->conditions],
                     'data' => $formContext,
                 ]
             );
             $Session->write('filter', $filter);
-//            $formContext = $Request->getData();
-//            osd($Filter->conditions, 'doing new post data for ' . $scope);
         }
         else {
             $query->where($Session->read("filter.conditions.$scope") ?? []);
-//            osd($Session->read("filter.conditions.$scope") ?? [], 'doing cached filter for ' . $scope);
         }
-        /*
-         * This one seems ok, but it will need to be associated with a
-         * particular paging scope.
-         */
+        /* This one seems ok, but it will need to be associated with a particular paging scope. */
         $this->getController()->set('filterSchema', $formContext);
 
         return $query;
     }
-
-//    public function exportFormContext($name)
-//    {
-//
-//    }
 
     /**
      * Get the table instance
