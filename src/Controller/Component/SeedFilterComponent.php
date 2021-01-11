@@ -102,7 +102,7 @@ class SeedFilterComponent extends Component
          * It may go as is or be reassigned post data which
          * might carry error reporting
          */
-        $formContext = empty($Request->getData()) ? $filter['data'] : $Request->getData(); //$Table->newEntity([]);
+        $formContext = empty($Request->getData()) ? $filter['data'] ?? [] : $Request->getData(); //$Table->newEntity([]);
 //        debug($formContext);
 //        debug($Request->is(['post', 'put']));
 //        debug(!empty($formContext));
