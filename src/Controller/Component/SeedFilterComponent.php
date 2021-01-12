@@ -5,6 +5,7 @@ namespace StackPagination\Controller\Component;
 
 
 use Cake\Controller\ComponentRegistry;
+use Cake\ORM\Query;
 use Cake\ORM\Table;
 use StackPagination\Exception\BadClassConfigurationException;
 use Cake\Controller\Component;
@@ -86,7 +87,7 @@ class SeedFilterComponent extends Component
      * Add a user defined filter to the pre-distilation seed query
      *
      * This replaces `concreteController::userFilter
-     * @param $query
+     * @param  Query query
      * @param $scope string the model/scope name from the pagination block for this query
      * @return mixed
      */
@@ -95,6 +96,7 @@ class SeedFilterComponent extends Component
         $Request = $this->getController()->getRequest();
         $Session = $Request->getSession();
         $Filter = $this->getForm();
+        $Filter->setQuery($query);
         $filter = $Session->read('filter') ?? [];
 
         /**
