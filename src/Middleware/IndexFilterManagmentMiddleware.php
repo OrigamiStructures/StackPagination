@@ -79,7 +79,7 @@ class IndexFilterManagmentMiddleware implements MiddlewareInterface
         $sessionData = $session->read() ?? [];
         $requestPath = $request->getParam('controller') . '_' . $request->getParam('action');
         $filterPath = Hash::get($sessionData, 'filter.path' ) ?? 'empty';
-        $allowedPaths = Configure::read('filter_scopes.' . $filterPath);
+        $allowedPaths = Configure::read('filter_scopes.' . $filterPath)  ?? [];
 
         if (
             $request->getParam('plugin') !== 'DebugKit' //ignore all DebugKit requests

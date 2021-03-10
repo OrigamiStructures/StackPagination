@@ -5,6 +5,7 @@ namespace StackPagination\Controller\Component;
 
 
 use Cake\Controller\ComponentRegistry;
+use Cake\ORM\Query;
 use Cake\ORM\Table;
 use StackPagination\Exception\BadClassConfigurationException;
 use Cake\Controller\Component;
@@ -86,7 +87,7 @@ class SeedFilterComponent extends Component
      * Add a user defined filter to the pre-distilation seed query
      *
      * This replaces `concreteController::userFilter
-     * @param $query
+     * @param  Query query
      * @param $scope string the model/scope name from the pagination block for this query
      * @return mixed
      */
@@ -94,46 +95,46 @@ class SeedFilterComponent extends Component
     {
         $Request = $this->getController()->getRequest();
         $Session = $Request->getSession();
-        $Table = $this->getTable();
         $Filter = $this->getForm();
+        $Filter->setQuery($query);
+        $filter = $Session->read('filter') ?? [];
 
         /**
          * This one value will go out to render the page
          * It may go as is or be reassigned post data which
          * might carry error reporting
          */
-        $formContext = $Table->newEntity([]);
+        $formContext = empty($Request->getData()) ? $filter['data'] ?? [] : $Request->getData(); //$Table->newEntity([]);
+//        debug($formContext);
+//        debug($Request->is(['post', 'put']));
+//        debug(!empty($formContext));
+//        debug(($Request->is(['post', 'put']) || !empty($formContext)));
+//        debug(($formContext['pagingScope'] ?? '') == $scope);
+//        debug($Filter->execute((array) $formContext));
 
-        if ($Request->is(['post', 'put'])
-            && $Request->getData('pagingScope') == $scope
-            && $Filter->execute($Request->getData())
+        if (($Request->is(['post', 'put']) || !empty($formContext))
+            && ($formContext['pagingScope'] ?? '') == $scope
+            && $Filter->execute((array) $formContext)
         ) {
             $query->where($Filter->conditions);
-            $filter = $Session->read('filter');
-            $filter['path'] = $this->getController()->getRequest()->getParam('controller')
-                . '_' . $this->getController()->getRequest()->getParam('action');
-            $filter['conditions'][$scope] = $Filter->conditions;
+            $filter = array_merge(
+                $filter,
+                [
+                    'path' => $this->endPointIdentifier(),
+                    'conditions' => [$scope => $Filter->conditions],
+                    'data' => $formContext,
+                ]
+            );
             $Session->write('filter', $filter);
-            $formContext = $Request->getData();
-//            osd($Filter->conditions, 'doing new post data for ' . $scope);
         }
         else {
             $query->where($Session->read("filter.conditions.$scope") ?? []);
-//            osd($Session->read("filter.conditions.$scope") ?? [], 'doing cached filter for ' . $scope);
         }
-        /*
-         * This one seems ok, but it will need to be associated with a
-         * particular paging scope.
-         */
+        /* This one seems ok, but it will need to be associated with a particular paging scope. */
         $this->getController()->set('filterSchema', $formContext);
 
         return $query;
     }
-
-//    public function exportFormContext($name)
-//    {
-//
-//    }
 
     /**
      * Get the table instance
@@ -159,6 +160,15 @@ class SeedFilterComponent extends Component
             ?? 'App\Filter\\' . $this->getConfig('tableAlias') . 'Filter';
         $this->form = new $class();
         return $this->form;
+    }
+
+    /**
+     * @return string
+     */
+    protected function endPointIdentifier(): string
+    {
+        return $this->getController()->getRequest()->getParam('controller')
+            . '_' . $this->getController()->getRequest()->getParam('action');
     }
 
     /**
