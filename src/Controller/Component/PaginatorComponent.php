@@ -45,6 +45,8 @@ class PaginatorComponent extends CorePaginator
     /**
      * Filter and Paginate a stackSet, create View variables for rendering
      *
+     * set pages that will allow filter to continue in config/filter_scopes.php
+     *
      * $options =
      * [
      *      tableName => string stackTableName, [name=>[config], or StackTable {obj}

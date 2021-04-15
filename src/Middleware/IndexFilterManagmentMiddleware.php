@@ -79,6 +79,7 @@ class IndexFilterManagmentMiddleware implements MiddlewareInterface
         $sessionData = $session->read() ?? [];
         $requestPath = $request->getParam('controller') . '_' . $request->getParam('action');
         $filterPath = Hash::get($sessionData, 'filter.path' ) ?? 'empty';
+        // set these in config/filter_scopes.php
         $allowedPaths = Configure::read('filter_scopes.' . $filterPath)  ?? [];
 
         if (
