@@ -83,7 +83,7 @@ class IndexFilterManagmentMiddleware implements MiddlewareInterface
             && $filterPath !== $requestPath                   //ignore if we're actually on the original page
             && !in_array($requestPath, $allowedPaths)         //ignore if this path is an approved path
         ) {
-            debug($debug);
+//            debug($debug);
             $session->delete('filter');            //well then, delete the filter
         }
 
