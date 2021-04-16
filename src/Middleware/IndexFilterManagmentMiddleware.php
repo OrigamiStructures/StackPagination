@@ -65,7 +65,6 @@ class IndexFilterManagmentMiddleware implements MiddlewareInterface
      *     ]
      *   ]
      * ] END====================
-
      * Processes an incoming server request in order to produce a response.
      * If unable to produce the response itself, it may delegate to the provided
      * request handler to do so.
@@ -75,12 +74,8 @@ class IndexFilterManagmentMiddleware implements MiddlewareInterface
         /* @var ServerRequest $request */
         /* @var Session $session */
 
-        $session = $request->getSession();
-        $sessionData = $session->read() ?? [];
-        $requestPath = $request->getParam('controller') . '_' . $request->getParam('action');
-        $filterPath = Hash::get($sessionData, 'filter.path' ) ?? 'empty';
-        // set these in config/filter_scopes.php
-        $allowedPaths = Configure::read('filter_scopes.' . $filterPath)  ?? [];
+        list($session, $sessionData, $requestPath, $filterPath, $allowedPaths, $debug)
+            = $this->prepEnvironmentals($request);
 
         if (
             $request->getParam('plugin') !== 'DebugKit' //ignore all DebugKit requests
@@ -88,11 +83,35 @@ class IndexFilterManagmentMiddleware implements MiddlewareInterface
             && $filterPath !== $requestPath                   //ignore if we're actually on the original page
             && !in_array($requestPath, $allowedPaths)         //ignore if this path is an approved path
         ) {
+            debug($debug);
             $session->delete('filter');            //well then, delete the filter
         }
 
         unset($session, $sessionData, $requestPath, $allowedPaths); //be a good middleware citizen
 
         return $handler->handle($request);
+    }
+
+    /**
+     * @param ServerRequestInterface $request
+     * @return array
+     */
+    private function prepEnvironmentals(ServerRequestInterface $request): array
+    {
+        $session = $request->getSession();
+        $sessionData = $session->read() ?? [];
+        $requestPath = $request->getParam('controller') . '_' . $request->getParam('action');
+        $filterPath = Hash::get($sessionData, 'filter.path') ?? 'empty';
+        // set these in config/filter_scopes.php
+        $allowedPaths = Configure::read('filter_scopes.' . $filterPath) ?? [];
+
+//        $debugA = "\n<pre>Plugin: " . $request->getParam('plugin') . '</pre>';
+//        $debugB = '<pre>Session Data: ' . var_export($sessionData, true) . '</pre>';
+//        $debugC = "\n<pre>requestPath: " . $requestPath . '</pre>';
+//        $debugD = "\n<pre>filterPath: " . $filterPath . '</pre>';
+//        $debugE = "\n<pre>allowedPath: " . var_export($allowedPaths, true) . '</pre>';
+//        $debug = $debugA . $debugB . $debugC . $debugD . $debugE;
+
+        return array($session, $sessionData, $requestPath, $filterPath, $allowedPaths, $debug ?? null);
     }
 }
